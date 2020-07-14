@@ -23,17 +23,17 @@ from matplotlib.animation import FuncAnimation
 # 5000 evaluations, accuracy around 10**-3 : N = 10, time_steps = 100, repetitions = 5, k = 3
 # 2000 evaluations, accuracy around 10**-2 : N = 8, time_steps = 50, repetitions = 5, k = 4
 
-N = 12 # Size of swarm
-time_steps = 150
-repetitions = 5
+N = 8 # Size of swarm
+time_steps = 50
+repetitions = 3
 # The total number of evaluations is N * time_steps * repetitions
 
 # Choose function to evaluate
 # Choices: Rosenbrock, Alpine, Griewank
 fn_name = "Rosenbrock"
 
-k = 4 # Number of informants for each particle
-phi = 2.4 # Confidence constant, must be > 2
+k = 3 # Number of informants for each particle
+phi = 2.2 # Confidence constant, must be > 2
 xmin = -100 # Size of search field
 xmax = 100 # Size of search field
 vmax = abs(xmax - xmin)/2
@@ -49,6 +49,7 @@ cmax = c1*phi
 # Helper functions
 
 # Evaluate the required function
+evaluations = 0
 def evaluate(pos, fn_name):
 	x = pos[0]
 	y = pos[1]
@@ -63,6 +64,8 @@ def evaluate(pos, fn_name):
 		f = 1 + 1/4000*x**2 + 1/4000*y**2 \
 			-np.cos(x)*np.cos(0.5*y*np.sqrt(2))
 
+	global evaluations
+	evaluations += 1	
 	return f
 
 # Choose k informants randomly
@@ -95,7 +98,7 @@ class Particle:
 
 		# Best found position and value by informants
 		# format: np array of shape (1, 3) - x, y, value
-		self.g = None
+		self.g = p
 
 		# Empty list of informants
 		self.informants = []
@@ -105,7 +108,7 @@ class Particle:
 		# Receive best positions with values from informants
 		received = np.zeros((k, 3))
 		for i, informant in enumerate(self.informants):
-			received[i, :] = informant.p
+			received[i, :] = informant.g
 		# Set g to LOWEST value
 		i = np.argmin(received[:,2])
 		self.g = received[i]
@@ -117,6 +120,9 @@ class Particle:
 		if value < self.p[2]:
 			self.p[2] = value
 			self.p[0:2] = self.pos
+		if value < self.g[2]:
+			self.g[2] = value
+			self.g[0:2] = self.pos
 
 		# Communicate with informants, update g
 		self.communicate()
@@ -159,9 +165,9 @@ class Particle:
 def create_swarm():
 	# Create array of random positions
 	initial_positions = np.random.uniform(xmin, xmax, (N, 2))
-
+	
 	# Evaluate positions for initial p values
-	p_values = np.zeros((N, 3))
+	p_values = np.inf*np.ones((N, 3))
 	for i, pos in enumerate(initial_positions):
 		p_values[i,2] = evaluate(pos, fn_name)
 		p_values[i,0:2] = pos
@@ -179,7 +185,7 @@ def create_swarm():
 	random_informants(particles)
 
 	# Initialise array of positions for animation
-	positions = np.zeros((time_steps, N, 2))
+	positions = np.inf*np.ones((time_steps, N, 2))
 	positions[0,:,:] = initial_positions
 
 	return particles, positions
@@ -194,22 +200,22 @@ def evolve(particles, positions):
 		# Select informants for next time step
 		random_informants(particles)
 
-# Extract optimal parameters (from p)
+# Extract optimal parameters (from g)
 def get_parameters(particles):
-	final_p = np.zeros((N, 3))
+	final_g = np.inf*np.ones((N, 3))
 	for i,particle in enumerate(particles):
-		final_p[i,:] = particle.p
-	optimal_i = np.argmin(final_p[2])
-	x = final_p[optimal_i][0]
-	y = final_p[optimal_i][1]
-	f = final_p[optimal_i][2]
+		final_g[i,:] = particle.g
+	optimal_i = np.argmin(final_g[2])
+	x = final_g[optimal_i][0]
+	y = final_g[optimal_i][1]
+	f = final_g[optimal_i][2]
 	return np.array([x, y, f])
 
 ###################################################################
 
 # Evolve and find best result
-results = np.zeros((repetitions, 3))
-all_positions = np.zeros((repetitions, time_steps, N, 2))
+results = np.inf*np.ones((repetitions, 3))
+all_positions = np.inf*np.ones((repetitions, time_steps, N, 2))
 for r in range(repetitions):
 	particles, positions = create_swarm()
 	evolve(particles, positions)
@@ -227,7 +233,7 @@ best_y = results[best_value_index][1]
 best_f = results[best_value_index][2]
 
 print(f"Minimum is {best_f} at: [{best_x}, {best_y}]")
-print(f"{repetitions} x {N*time_steps} = {repetitions*N*time_steps} evaluations made.")
+print(f"{evaluations} evaluations made.")
 
 ###################################################################
 
