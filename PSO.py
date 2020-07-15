@@ -18,21 +18,26 @@ from matplotlib.animation import FuncAnimation
 
 # Initialize constants
 
-constants = {
+initial_constants = {
 	"N":9,					# Size of swarm
 	"time_steps":50,			# Time steps for each repetition
 	"repetitions":3,			# Number of repetitions
-	"fn_name":"Rosenbrock",	# Name of function to be evaluated (Rosenbrock, Alpine or Griewank)
 	"k":3,					# Number of informants for each particle
 	"phi":2.2,				# Confidence constant, must be > 2
+	"fn_name":"Rosenbrock",	# Name of function to be evaluated (Rosenbrock, Alpine or Griewank)
 	"xmin":-100,				# Size of search field, minimum
 	"xmax":100,				# Size of search field, maximum
 	"show_animation":True		# Show animation of best rep
 	}
 
+# Determine number of repetitions given constants
+def determine_n_evaluations(N, time_steps, repetitions):
+	return N*time_steps*repetitions + repetitions*N
+
 def set_constants(dictionary):
 	# Get constants from dictionary
-	global N, time_steps, repetitions, fn_name, k, phi, xmin, xmax, show_animation, vmax
+	global N, time_steps, repetitions, fn_name, k, phi
+	global xmin, xmax, show_animation, vmax, c1, cmax
 	N = dictionary["N"]
 	time_steps = dictionary["time_steps"]
 	repetitions = dictionary["repetitions"]
@@ -46,19 +51,15 @@ def set_constants(dictionary):
 	# Calculate maximum velocity
 	vmax = abs(xmax - xmin)/2
 
-# Call set_constants function
-set_constants(constants)
+	# Calculate confidence parameters using phi
+	c1 = 1/(phi-1+np.sqrt(phi**2-2*phi))
+	cmax = c1*phi
 
 ###################################################################
-
-# Calculating confidence parameters using phi
-c1 = 1/(phi-1+np.sqrt(phi**2-2*phi))
-cmax = c1*phi
 
 # Helper functions
 
 # Evaluate the required function
-evaluations = 0
 def evaluate(pos, fn_name):
 	x = pos[0]
 	y = pos[1]
@@ -73,8 +74,6 @@ def evaluate(pos, fn_name):
 		f = 1 + 1/4000*x**2 + 1/4000*y**2 \
 			-np.cos(x)*np.cos(0.5*y*np.sqrt(2))
 
-	global evaluations
-	evaluations += 1	
 	return f
 
 # Choose k informants randomly
@@ -222,52 +221,69 @@ def get_parameters(particles):
 
 ###################################################################
 
-# Evolve and find best result
-results = np.inf*np.ones((repetitions, 3))
-all_positions = np.inf*np.ones((repetitions, time_steps, N, 2))
-for r in range(repetitions):
-	particles, positions = create_swarm()
-	evolve(particles, positions)
-	result = get_parameters(particles)
-	results[r] = result
-	all_positions[r] = positions
-	print(f"Repetition {r+1} finished.")
-	print(result)
-	print()
+# Run the algorithm, return best position and value
+def run_algorithm(constants):
+	# Call set_constants function
+	set_constants(constants)
 
-best_value_index = np.argmin(results[:,2])
+	results = np.inf*np.ones((repetitions, 3))
+	all_positions = np.inf*np.ones((repetitions, time_steps, N, 2))
+	for r in range(repetitions):
+		particles, positions = create_swarm()
+		evolve(particles, positions)
+		result = get_parameters(particles)
+		results[r] = result
+		all_positions[r] = positions
+		print(f"Repetition {r+1} finished.")
+		print(result)
+		print()
 
-best_x = results[best_value_index][0]
-best_y = results[best_value_index][1]
-best_f = results[best_value_index][2]
+	best_value_index = np.argmin(results[:,2])
 
-print(f"Minimum is {best_f} at: [{best_x}, {best_y}]")
-print(f"{evaluations} evaluations made.")
+	best_x = results[best_value_index][0]
+	best_y = results[best_value_index][1]
+	best_f = results[best_value_index][2]
+
+	return best_x, best_y, best_f, all_positions, best_value_index
 
 ###################################################################
 
 # Simulate particle swarm
+def simulate_swarm(all_positions):
+	if show_animation == False:
+		exit()
 
-if show_animation == False:
-	exit()
+	# Plot initial positions of particles
+	fig, ax = plt.subplots()
+	ax.set_xlim(xmin, xmax)
+	ax.set_ylim(xmin, xmax)
+	scat = ax.scatter(all_positions[best_value_index,0,:,0], all_positions[best_value_index,0,:,1], color="Black", s=1.5)
 
-# Plot initial positions of particles
-fig, ax = plt.subplots()
-ax.set_xlim(xmin, xmax)
-ax.set_ylim(xmin, xmax)
-scat = ax.scatter(all_positions[best_value_index,0,:,0], all_positions[best_value_index,0,:,1], color="Black", s=1.5)
+	# Create animation
+	interval = 200_000 / (N * time_steps * repetitions)
+	global animation
+	animation = FuncAnimation(fig, func=update_frames, interval=interval, fargs=[scat])
+	plt.show()
 
-# Update frames
-def update_frames(j):
+# Required update function for simulation
+def update_frames(j, *fargs):
+	scat = fargs[0]
 	try:
 		scat.set_offsets(all_positions[best_value_index,j])
 	except:
 		print("Simulation finished")
 		animation.event_source.stop()
 
-# Create animation
-interval = 200_000 / (N * time_steps * repetitions)
-animation = FuncAnimation(fig, func=update_frames, interval=interval)
-plt.show()
+###################################################################
 
-exit()
+# Determine average error (abs(true position - position))
+
+x, y, f, all_positions, best_value_index = run_algorithm(initial_constants)
+
+print(f"Minimum is {f} at: [{x}, {y}]")
+print(f"{determine_n_evaluations(N, time_steps, repetitions)} evaluations made.")
+
+if show_animation == False:
+	exit()
+else:
+	simulate_swarm(all_positions)
