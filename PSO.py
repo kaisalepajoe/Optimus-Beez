@@ -18,27 +18,36 @@ from matplotlib.animation import FuncAnimation
 
 # Initialize constants
 
-# Some suggestions
-# 9000 evaluations, accuracy around 10**-6 : N = 12, time_steps = 150, repetitions = 5, k = 4
-# 5000 evaluations, accuracy around 10**-3 : N = 10, time_steps = 100, repetitions = 5, k = 3
-# 2000 evaluations, accuracy around 10**-2 : N = 8, time_steps = 50, repetitions = 5, k = 4
+constants = {
+	"N":9,					# Size of swarm
+	"time_steps":50,			# Time steps for each repetition
+	"repetitions":3,			# Number of repetitions
+	"fn_name":"Rosenbrock",	# Name of function to be evaluated (Rosenbrock, Alpine or Griewank)
+	"k":3,					# Number of informants for each particle
+	"phi":2.2,				# Confidence constant, must be > 2
+	"xmin":-100,				# Size of search field, minimum
+	"xmax":100,				# Size of search field, maximum
+	"show_animation":True		# Show animation of best rep
+	}
 
-N = 9 # Size of swarm
-time_steps = 50
-repetitions = 3
-# The total number of evaluations is N * time_steps * repetitions
+def set_constants(dictionary):
+	# Get constants from dictionary
+	global N, time_steps, repetitions, fn_name, k, phi, xmin, xmax, show_animation, vmax
+	N = dictionary["N"]
+	time_steps = dictionary["time_steps"]
+	repetitions = dictionary["repetitions"]
+	fn_name = dictionary["fn_name"]
+	k = dictionary["k"]
+	phi = dictionary["phi"]
+	xmin = dictionary["xmin"]
+	xmax = dictionary["xmax"]
+	show_animation = dictionary["show_animation"]
+	
+	# Calculate maximum velocity
+	vmax = abs(xmax - xmin)/2
 
-# Choose function to evaluate
-# Choices: Rosenbrock, Alpine, Griewank
-fn_name = "Rosenbrock"
-
-k = 3 # Number of informants for each particle
-phi = 2.2 # Confidence constant, must be > 2
-xmin = -100 # Size of search field
-xmax = 100 # Size of search field
-vmax = abs(xmax - xmin)/2
-
-show_animation = True
+# Call set_constants function
+set_constants(constants)
 
 ###################################################################
 
