@@ -16,37 +16,35 @@ from matplotlib.animation import FuncAnimation
 
 ###################################################################
 
-# Initialize constants
+# Change function info
 
-initial_constants = {
-	"N":9,					# Size of swarm
-	"time_steps":50,			# Time steps for each repetition
-	"repetitions":3,			# Number of repetitions
-	"k":3,					# Number of informants for each particle
-	"phi":2.2,				# Confidence constant, must be > 2
-	"fn_name":"Rosenbrock",	# Name of function to be evaluated (Rosenbrock, Alpine or Griewank)
-	"xmin":-100,				# Size of search field, minimum
-	"xmax":100,				# Size of search field, maximum
-	"show_animation":True		# Show animation of best rep
-	}
+function_info = {
+	"fn_name":"Rosenbrock",				# Name of function to be evaluated (Rosenbrock, Alpine or Griewank)
+	"true_position":np.array([1,1]),	# True position of global minimum of this function
+	"xmin":-100,						# Size of search field, minimum
+	"xmax":100,							# Size of search field, maximum
+	"show_animation":True				# Show animation of best repetition
+}
 
-# Determine number of repetitions given constants
-def determine_n_evaluations(N, time_steps, repetitions):
-	return N*time_steps*repetitions + repetitions*N
+###################################################################
 
-def set_constants(dictionary):
-	# Get constants from dictionary
-	global N, time_steps, repetitions, fn_name, k, phi
-	global xmin, xmax, show_animation, vmax, c1, cmax
-	N = dictionary["N"]
-	time_steps = dictionary["time_steps"]
-	repetitions = dictionary["repetitions"]
-	fn_name = dictionary["fn_name"]
-	k = dictionary["k"]
-	phi = dictionary["phi"]
-	xmin = dictionary["xmin"]
-	xmax = dictionary["xmax"]
-	show_animation = dictionary["show_animation"]
+# Helper functions
+
+# Set learning parameters globally
+def set_global_parameters(constants, function_info):
+	global N, time_steps, repetitions, fn_name, true_position, k
+	global phi, xmin, xmax, show_animation, vmax, c1, cmax
+
+	N = constants["N"]
+	time_steps = constants["time_steps"]
+	repetitions = constants["repetitions"]
+	fn_name = function_info["fn_name"]
+	true_position = function_info["true_position"]
+	k = constants["k"]
+	phi = constants["phi"]
+	xmin = function_info["xmin"]
+	xmax = function_info["xmax"]
+	show_animation = function_info["show_animation"]
 	
 	# Calculate maximum velocity
 	vmax = abs(xmax - xmin)/2
@@ -55,24 +53,26 @@ def set_constants(dictionary):
 	c1 = 1/(phi-1+np.sqrt(phi**2-2*phi))
 	cmax = c1*phi
 
-###################################################################
-
-# Helper functions
+# Determine number of repetitions given constants
+def determine_n_evaluations(N, time_steps, repetitions):
+	return N*time_steps*repetitions + repetitions*N
 
 # Evaluate the required function
-def evaluate(pos, fn_name):
+def evaluate(pos):
 	x = pos[0]
 	y = pos[1]
 	if fn_name == "Rosenbrock":
 		f = (1-x)**2 + 100*(y-x**2)**2
 
-	if fn_name == "Alpine":
+	elif fn_name == "Alpine":
 		f = abs(x*np.sin(x) + 0.1*x) + \
 			abs(y*np.sin(y) + 0.2*y)
 
-	if fn_name == "Griewank":
+	elif fn_name == "Griewank":
 		f = 1 + 1/4000*x**2 + 1/4000*y**2 \
 			-np.cos(x)*np.cos(0.5*y*np.sqrt(2))
+	else:
+		print("Invalid function name!")
 
 	return f
 
@@ -124,7 +124,7 @@ class Particle:
 	def step(self):
 		# Evaluate current position
 		# Update p if current position is LOWER
-		value = evaluate(self.pos, fn_name)
+		value = evaluate(self.pos)
 		if value < self.p[2]:
 			self.p[2] = value
 			self.p[0:2] = self.pos
@@ -177,7 +177,7 @@ def create_swarm():
 	# Evaluate positions for initial p values
 	p_values = np.inf*np.ones((N, 3))
 	for i, pos in enumerate(initial_positions):
-		p_values[i,2] = evaluate(pos, fn_name)
+		p_values[i,2] = evaluate(pos)
 		p_values[i,0:2] = pos
 
 	# Create list of random velocities (up to limit)
@@ -200,11 +200,11 @@ def create_swarm():
 
 # Update positions of particles for all time steps
 def evolve(particles, positions):
-	for step in range(time_steps):
+	for s in range(time_steps):
 		for i, particle in enumerate(particles):
 			particle.step()
 			# Update positions for animation
-			positions[step,i,:] = particle.pos
+			positions[s,i,:] = particle.pos
 		# Select informants for next time step
 		random_informants(particles)
 
@@ -222,10 +222,8 @@ def get_parameters(particles):
 ###################################################################
 
 # Run the algorithm, return best position and value
-def run_algorithm(constants):
-	# Call set_constants function
-	set_constants(constants)
-
+def run_algorithm():
+	# Create empty array of results and all visited positions
 	results = np.inf*np.ones((repetitions, 3))
 	all_positions = np.inf*np.ones((repetitions, time_steps, N, 2))
 	for r in range(repetitions):
@@ -244,15 +242,12 @@ def run_algorithm(constants):
 	best_y = results[best_value_index][1]
 	best_f = results[best_value_index][2]
 
-	return best_x, best_y, best_f, all_positions, best_value_index
+	return best_x, best_y, best_f, all_positions, best_value_index, true_position
 
 ###################################################################
 
 # Simulate particle swarm
 def simulate_swarm(all_positions):
-	if show_animation == False:
-		exit()
-
 	# Plot initial positions of particles
 	fig, ax = plt.subplots()
 	ax.set_xlim(xmin, xmax)
@@ -276,14 +271,81 @@ def update_frames(j, *fargs):
 
 ###################################################################
 
-# Determine average error (abs(true position - position))
+# Functions for determining the best constants for learning
 
-x, y, f, all_positions, best_value_index = run_algorithm(initial_constants)
+# Determine error
+def determine_error(true_position, position):
+	return abs(true_position - position)
+
+# Return dictionary of random parameters according to 
+# required time steps and allowed deviation of this number
+# Required parameters are N, time_steps, repetitions, k, phi
+def set_random_constants(required_time_steps, allowed_deviation):
+	# Set minimum and maximum values for search
+	N_min = 3
+	N_max = 30
+	repetitions_min = 1
+	repetitions_max = 101
+
+	time_steps_min = 10
+	time_steps_max = required_time_steps + allowed_deviation
+
+	k_min = 1
+	k_max = N_max
+	phi_min = 2.00001
+	phi_max = 3
+
+	# Initiate empty dictionary
+	constants = {}
+
+	# Set parameters with known ranges
+	constants["k"] = np.random.randint(k_min, k_max+1)
+	constants["phi"] = np.random.uniform(phi_min, phi_max)
+	# aödslfkajdfölakjd set function name etc MISSING
+
+	# Set N-t-r grid size
+	NTR = np.ones((N_max - N_min, 2*allowed_deviation, repetitions_max - repetitions_min))
+	# Populate grid with total time steps
+	for n in range(len(NTR)):
+		for t in range(len(NTR[n])):
+			for r in range(len(NTR[n, t])):
+				NTR[n,t,r] = (n+N_min)*(t+time_steps_min)*(r+repetitions_min)
+	valid_NTR_choices = np.where((NTR >= required_time_steps - allowed_deviation) & (NTR <= required_time_steps + allowed_deviation))
+	valid_NTR_choices = np.array([valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2]])
+	# valid_NTR_choices = np.array((zip(valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2])))
+	# valid_NTR_choices contains the indices that correspond to parameters
+	# with the allowed total number of time steps
+
+	# Set N, time_steps, repetitions
+	n, t, r = valid_NTR_choices[:,np.random.randint(0,valid_NTR_choices.shape[1])]
+	N = n + N_min
+	time_steps = t + time_steps_min
+	repetitions = r + repetitions_min
+	constants["N"] = N
+	constants["time_steps"] = time_steps
+	constants["repetitions"] = repetitions
+
+	return constants
+
+###################################################################
+
+# Run everything 
+
+# Set random learning constants
+constants = set_random_constants(500,30)
+# Set global parameters from the dictionaries constants and function_info
+set_global_parameters(constants, function_info)
+
+x, y, f, all_positions, best_value_index, true_position = run_algorithm()
+error = determine_error(true_position, np.array([x,y]))
 
 print(f"Minimum is {f} at: [{x}, {y}]")
-print(f"{determine_n_evaluations(N, time_steps, repetitions)} evaluations made.")
+print(f"With an error of {error}")
 
-if show_animation == False:
+n_evaluations = determine_n_evaluations(constants["N"], constants["time_steps"], constants["repetitions"])
+print(f"{n_evaluations} evaluations made.")
+
+if function_info["show_animation"] == False:
 	exit()
 else:
 	simulate_swarm(all_positions)
