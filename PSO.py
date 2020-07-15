@@ -232,9 +232,6 @@ def run_algorithm():
 		result = get_parameters(particles)
 		results[r] = result
 		all_positions[r] = positions
-		print(f"Repetition {r+1} finished.")
-		print(result)
-		print()
 
 	best_value_index = np.argmin(results[:,2])
 
@@ -275,7 +272,9 @@ def update_frames(j, *fargs):
 
 # Determine error
 def determine_error(true_position, position):
-	return abs(true_position - position)
+	xy_error = abs(true_position - position)
+	error = np.sqrt(xy_error[0]**2 + xy_error[1]**2)
+	return error
 
 # Return dictionary of random parameters according to 
 # required time steps and allowed deviation of this number
@@ -285,23 +284,17 @@ def set_random_constants(required_time_steps, allowed_deviation):
 	N_min = 3
 	N_max = 30
 	repetitions_min = 1
-	repetitions_max = 101
+	repetitions_max = 30
 
 	time_steps_min = 10
 	time_steps_max = required_time_steps + allowed_deviation
 
 	k_min = 1
-	k_max = N_max
 	phi_min = 2.00001
-	phi_max = 3
+	phi_max = 2.4
 
 	# Initiate empty dictionary
 	constants = {}
-
-	# Set parameters with known ranges
-	constants["k"] = np.random.randint(k_min, k_max+1)
-	constants["phi"] = np.random.uniform(phi_min, phi_max)
-	# aödslfkajdfölakjd set function name etc MISSING
 
 	# Set N-t-r grid size
 	NTR = np.ones((N_max - N_min, 2*allowed_deviation, repetitions_max - repetitions_min))
@@ -321,7 +314,11 @@ def set_random_constants(required_time_steps, allowed_deviation):
 	N = n + N_min
 	time_steps = t + time_steps_min
 	repetitions = r + repetitions_min
+
+	# Set parameters
+	constants["phi"] = np.random.uniform(phi_min, phi_max)
 	constants["N"] = N
+	constants["k"] = np.random.randint(k_min, N+1)
 	constants["time_steps"] = time_steps
 	constants["repetitions"] = repetitions
 
@@ -331,21 +328,53 @@ def set_random_constants(required_time_steps, allowed_deviation):
 
 # Run everything 
 
-# Set random learning constants
-constants = set_random_constants(500,30)
-# Set global parameters from the dictionaries constants and function_info
-set_global_parameters(constants, function_info)
+# Find optimal constants for 1000 evaluations
+tests = 100
+tests_with_each_constants = 25
+allowed_time_steps = 500
+allowed_deviation = 50
 
-x, y, f, all_positions, best_value_index, true_position = run_algorithm()
-error = determine_error(true_position, np.array([x,y]))
+best_error = np.inf
 
-print(f"Minimum is {f} at: [{x}, {y}]")
-print(f"With an error of {error}")
+for t in range(tests):
+	print(f"Test {t+1}/{tests}")
+	# Set random learning constants
+	constants = set_random_constants(allowed_time_steps, allowed_deviation)
+	# Set global parameters from the dictionaries constants and function_info
+	set_global_parameters(constants, function_info)
 
-n_evaluations = determine_n_evaluations(constants["N"], constants["time_steps"], constants["repetitions"])
+	# Repeat several times for this constants configuration
+	errors = np.inf*np.ones(tests_with_each_constants)
+	for rep in range(tests_with_each_constants):
+		x, y, f, all_positions, best_value_index, true_position = run_algorithm()
+		error = determine_error(true_position, np.array([x,y]))
+		errors[rep] = error
+	avg_error = np.average(errors)
+
+	if avg_error < best_error:
+		best_constants = constants
+		best_error = avg_error
+		best_x = x
+		best_y = y
+		best_value = f
+		best_all_positions = all_positions
+
+
+print("The best found constants configuration is:")
+print(best_constants)
+print(f"This configuration has the error: {best_error}")
+
+print(f"Minimum is {best_value} at: [{best_x}, {best_y}]")
+print(f"With an error of {best_error}")
+
+n_evaluations = determine_n_evaluations(best_constants["N"], best_constants["time_steps"], best_constants["repetitions"])
 print(f"{n_evaluations} evaluations made.")
 
+# Simulation gives error
+"""
 if function_info["show_animation"] == False:
 	exit()
 else:
-	simulate_swarm(all_positions)
+	simulate_swarm(best_all_positions)
+"""
+exit()
