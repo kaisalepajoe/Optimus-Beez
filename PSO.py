@@ -23,7 +23,7 @@ from matplotlib.animation import FuncAnimation
 # 5000 evaluations, accuracy around 10**-3 : N = 10, time_steps = 100, repetitions = 5, k = 3
 # 2000 evaluations, accuracy around 10**-2 : N = 8, time_steps = 50, repetitions = 5, k = 4
 
-N = 8 # Size of swarm
+N = 9 # Size of swarm
 time_steps = 50
 repetitions = 3
 # The total number of evaluations is N * time_steps * repetitions
