@@ -1,0 +1,7 @@
+{
+	"fn_name":"Rosenbrock",
+	"true_position":np.array([1,1]),
+	"xmin":-100,
+	"xmax":100,
+	"show_animation":True			
+}
