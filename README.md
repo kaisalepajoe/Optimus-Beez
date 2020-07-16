@@ -2,6 +2,11 @@
 
 This is a Particle Swarm Optimization (PSO) package. The PSO used is the simplest version presented by Maurice Clarc in "Particle Swarm Optimization".
 
+# Installation
+
+Run the following command:
+pip install optimus-beez
+
 # How to use Optimus-Beez
 
 ## Choosing the function to evaluate

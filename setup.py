@@ -6,4 +6,7 @@ setup(
 	description = 'Simple Particle Swarm Optimization',
 	py_modules=['evaluate', 'PSO', 'optimize_constants'],
 	package_dir={'': 'src'},
+	classifiers=[
+		'Programming Language :: Python :: 3',
+		]
 	)
