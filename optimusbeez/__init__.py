@@ -1,6 +1,6 @@
 #from .evaluate import evaluate
 
-from .PSO import optimize
+from .PSO import Experiment
 from .PSO import find_optimal_constants
 
 from .PSO import read_dictionary_from_file
