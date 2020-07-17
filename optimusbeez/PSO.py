@@ -20,6 +20,8 @@ from .evaluate import evaluate
 
 ###################################################################
 
+print("This package has been updated.")
+
 # Helper functions
 
 # Read and return dictionary from txt file

@@ -1,4 +1,4 @@
-from .evaluate import evaluate
+#from .evaluate import evaluate
 
 from .PSO import optimize
 from .PSO import find_optimal_constants
@@ -11,5 +11,6 @@ from .PSO import determine_error
 from .PSO import Training_session
 from .PSO import Particle
 from .PSO import Swarm
+from .PSO import evaluate
 
 print("You have imported Optimus Beez")
