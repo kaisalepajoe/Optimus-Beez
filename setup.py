@@ -20,5 +20,7 @@ setup(
 	install_requires=[
 		'numpy>=1.18.1',
 		'matplotlib>=3.1.3'],
+	test_suite='nose.collector',
+	tests_require=['nose']
 	
 	)

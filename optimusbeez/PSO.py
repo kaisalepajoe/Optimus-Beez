@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-from evaluate import evaluate
+#from evaluate import evaluate
 
 # Set random seed
 # np.random.seed(123)

@@ -5,9 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-from evaluate import evaluate
-import PSO
-
 #########################################################################
 
 # Return dictionary of random parameters according to 
