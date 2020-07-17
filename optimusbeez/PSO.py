@@ -24,8 +24,6 @@ from .evaluate import evaluate
 
 # Read and return dictionary from txt file
 def read_dictionary_from_file(filename):
-	#file = open(filename, "r")
-	#contents = file.read()
 	data = pkgutil.get_data('optimusbeez', filename)
 	dictionary = eval(data)
 	return dictionary
@@ -99,10 +97,12 @@ def set_random_constants(required_time_steps, allowed_deviation):
 
 # The training session class is inherited by particles and swarms
 # This class sets the required parameters from constants and function_info
-class Training_session:
-	def __init__(self, constants, function_info):
-		self.constants = constants
-		self.function_info = function_info
+class Experiment:
+	def __init__(self, constants=None, function_info=None):
+		if constants == None:
+			constants = read_dictionary_from_file('optimal_constants.txt')
+		if function_info == None:
+			function_info = read_dictionary_from_file('function_info.txt')
 
 		self.N = constants["N"]
 		self.time_steps = constants["time_steps"]
@@ -122,9 +122,132 @@ class Training_session:
 		self.c1 = 1/(self.phi-1+np.sqrt(self.phi**2-2*self.phi))
 		self.cmax = self.c1*self.phi
 
+	def constants(self):
+		constants = {'phi': self.phi, 'N': self.N, 'k': self.k, 
+			'time_steps': self.time_steps, 'repetitions': self.repetitions}
+		return constants
+
+	def function_info(self):
+		function_info = {"fn_name":self.fn_name, "true_position":self.true_position,
+			"xmin":self.xmin, "xmax":self.xmax, "show_animation":self.show_animation}
+		return function_info
+		
+	def optimize_constants(self):
+		print("Set number of tests:")
+		tests = int(input())
+		print("Set number of repetitions for each constants configuration:")
+		tests_with_each_constants = int(input())
+		print("Set allowed time_steps:")
+		allowed_time_steps = int(input())
+		print("Set allowed deviation from time steps:")
+		allowed_deviation = int(input())
+
+		print("Finding optimal constants...")
+
+		best_error = np.inf
+
+		function_info = self.function_info()
+
+		for t in range(tests):
+			print(f"Test {t+1}/{tests}")
+			random_constants = set_random_constants(allowed_time_steps, allowed_deviation)
+
+			errors = np.inf*np.ones(tests_with_each_constants)
+
+			# Repeat several times for this constants configuration		
+			for constants_repetition in range(tests_with_each_constants):
+				swarm = Swarm(random_constants, function_info)
+				swarm.distribute_swarm()
+				swarm.run_algorithm()
+				errors[constants_repetition] = swarm.error
+
+			avg_error = np.average(errors)
+
+			if avg_error < best_error:
+				best_constants = random_constants
+				best_error = avg_error
+
+
+		print("The best found constants configuration is:")
+		print(best_constants)
+		print(f"This configuration has the error: {best_error}")
+
+		while True:
+			print("Save this configuration for this Experiment object?")
+			print("Write yes or no:")
+			answer = input()
+			if answer == "yes":
+				self.N = best_constants["N"]
+				self.time_steps = best_constants["time_steps"]
+				self.repetitions = best_constants["repetitions"]
+				self.k = best_constants["k"]
+				self.phi = best_constants["phi"],
+				while True:
+					print("Also choose")
+					print("1 to create new file with this configuration")
+					print("2 to overwrite optimal_constants.txt")
+					print("3 to skip")
+					print("Write 1, 2 or 3:")
+					choice = input()
+					if choice =="1":
+						print("Write a name for the file:")
+						filename = input()
+						write_dictionary_to_file(best_constants, filename)
+						return
+					elif choice == "2":
+						write_dictionary_to_file(best_constants, "optimal_constants.txt")
+						return
+					elif choice =="3":
+						return
+					else:
+						print("Invalid input.")
+						continue
+				break
+			elif answer == "no":
+				print("You have chosen to discard this configuration")
+				break
+			else:
+				print("Invalid input.")
+				continue
+
+	def run(self):
+		# Prompt user for input
+		default_evaluations = determine_n_evaluations(
+			self.N, self.time_steps, self.repetitions) 
+		print(f"Number of evaluations is set to {default_evaluations}")
+		print("Change number of evaluations? Write yes or no:")
+		set_evaluations = input()
+		if set_evaluations == "yes":
+			print("Set maximum number of evaluations:")
+			n_evaluations = int(input())
+			self.time_steps = int((n_evaluations - self.repetitions*self.N)/(self.repetitions*self.N))
+		print("Running algorithm...")
+
+		constants = self.constants()
+		function_info = self.function_info()
+
+		self.swarm = Swarm(constants, function_info)
+		self.swarm.distribute_swarm()
+		self.swarm.run_algorithm()
+		self.n_evaluations = determine_n_evaluations(self.swarm.N, self.swarm.time_steps, self.swarm.repetitions)
+
+		self.best_position = self.swarm.best_position
+		self.best_f = self.swarm.best_f
+		self.error = self.swarm.error
+
+		print(f"{self.n_evaluations} evaluations made.")
+		print(f"The best position is {self.best_position}.")
+		print(f"The value at this position is {self.best_f}")
+		print(f"Distance from true global minimum: {self.error}")
+
+		if self.show_animation == False:
+			pass
+		else:
+			self.swarm.simulate_swarm()	
+
 ###################################################################
 
-class Particle(Training_session):
+class Particle(Experiment):
 
 	def set_initial_state(self, pos, vel, p):
 		# Initializes particle with assigned
@@ -209,7 +332,7 @@ class Particle(Training_session):
 
 ###################################################################
 
-class Swarm(Training_session):
+class Swarm(Experiment):
 
 	# Set random positions, velocities, informants, and p-values for all particles
 	def distribute_swarm(self):
@@ -225,13 +348,16 @@ class Swarm(Training_session):
 		# Create array of random velocities (up to limit)
 		velocities = np.random.uniform(-self.vmax, self.vmax, (self.N, 2))
 
+		constants = self.constants()
+		function_info = self.function_info()
+
 		# Create list of particle objects
 		self.particles = []
 		for i in range(self.N):
 			pos = initial_positions[i]
 			vel = velocities[i]
 			p = p_values[i]
-			particle = Particle(self.constants, self.function_info)
+			particle = Particle(constants, function_info)
 			particle.set_initial_state(pos, vel, p)
 			self.particles.append(particle)
 
@@ -292,7 +418,7 @@ class Swarm(Training_session):
 		ax.set_xlim(self.xmin, self.xmax)
 		ax.set_ylim(self.xmin, self.xmax)
 		scat = ax.scatter(self.all_positions[self.best_value_index,0,:,0], 
-			self.all_positions[self.best_value_index,0,:,1], color="Black", s=1.5)
+			self.all_positions[self.best_value_index,0,:,1], color="Black", s=2)
 
 		# Create animation
 		interval = 200_000 / (self.N * self.time_steps * self.repetitions)
@@ -308,116 +434,6 @@ class Swarm(Training_session):
 		except:
 			print("Simulation finished")
 			self.animation.event_source.stop()
-
-###################################################################
-
-class Experiment:
-	def __init__(self, constants_filename="optimal_constants.txt", function_info_filename="function_info.txt"):
-		self.function_info = read_dictionary_from_file(function_info_filename)
-		self.constants = read_dictionary_from_file(constants_filename)
-
-		# Prompt user for input
-		default_evaluations = determine_n_evaluations(
-			self.constants["N"], self.constants["time_steps"], self.constants["repetitions"]) 
-		print(f"Number of evaluations is set to {default_evaluations}")
-		print("Change number of evaluations? Write yes or no:")
-		set_evaluations = input()
-		if set_evaluations == "yes":
-			print("Set maximum number of evaluations:")
-			n_evaluations = int(input())
-			self.constants["time_steps"] = int((n_evaluations - self.constants["repetitions"]*self.constants["N"])/
-				(self.constants["repetitions"]*self.constants["N"]))
-		print("Running algorithm...")
-
-		self.swarm = Swarm(self.constants, self.function_info)
-		self.swarm.distribute_swarm()
-		self.swarm.run_algorithm()
-		self.n_evaluations = determine_n_evaluations(self.swarm.N, self.swarm.time_steps, self.swarm.repetitions)
-
-		self.best_position = self.swarm.best_position
-		self.best_f = self.swarm.best_f
-		self.error = self.swarm.error
-
-		print(f"{self.n_evaluations} evaluations made.")
-		print(f"The best position is {self.best_position}.")
-		print(f"The value at this position is {self.best_f}")
-		print(f"Distance from true global minimum: {self.error}")
-
-		if self.function_info["show_animation"] == False:
-			pass
-		else:
-			self.swarm.simulate_swarm()
-
-###################################################################
-
-def find_optimal_constants():
-	# Prompt user for information
-	print("Set number of tests:")
-	tests = int(input())
-	print("Set number of repetitions for each constants configuration:")
-	tests_with_each_constants = int(input())
-	print("Set allowed time_steps:")
-	allowed_time_steps = int(input())
-	print("Set allowed deviation from time steps:")
-	allowed_deviation = int(input())
-
-	print("Finding optimal constants...")
-
-	# Read function info from txt file
-	function_info = read_dictionary_from_file("function_info.txt")
-
-	best_error = np.inf
-
-	for t in range(tests):
-		print(f"Test {t+1}/{tests}")
-		constants = set_random_constants(allowed_time_steps, allowed_deviation)
-
-		errors = np.inf*np.ones(tests_with_each_constants)
-
-		# Repeat several times for this constants configuration		
-		for constants_repetition in range(tests_with_each_constants):
-			swarm = Swarm(constants, function_info)
-			swarm.distribute_swarm()
-			swarm.run_algorithm()
-			errors[constants_repetition] = swarm.error
-
-		avg_error = np.average(errors)
-
-		if avg_error < best_error:
-			best_constants = constants
-			best_error = avg_error
-
-
-	print("The best found constants configuration is:")
-	print(best_constants)
-	print(f"This configuration has the error: {best_error}")
-
-	while True:
-		print("Save this configuration?")
-		print("Write yes or no:")
-		answer = input()
-		if answer == "yes":
-			while True:
-				print("Overwrite optimal_constants.txt?")
-				print("Write yes or no:")
-				overwrite = input()
-				if overwrite =="yes":
-					write_dictionary_to_file(best_constants, "optimal_constants.txt")
-					return
-				elif overwrite =="no":
-					print("Write a name for the file:")
-					filename = input()
-					write_dictionary_to_file(best_constants, filename)
-					return
-				else:
-					continue
-			break
-		elif answer == "no":
-			break
-		else:
-			print("Invalid input.")
-			continue
-	
 
 ###################################################################
 
