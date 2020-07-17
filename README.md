@@ -5,7 +5,7 @@ This is a Particle Swarm Optimization (PSO) package. The PSO used is the simples
 # Installation
 
 Run the following command:
-pip install optimus-beez
+pip install optimusbeez
 
 # How to use Optimus-Beez
 

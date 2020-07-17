@@ -1,3 +1,5 @@
+import numpy as np
+
 # Evaluate the required function
 
 def evaluate(pos, fn_name):

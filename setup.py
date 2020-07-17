@@ -16,6 +16,8 @@ setup(
 	license='MIT',
 	packages=setuptools.find_packages(),
 	include_package_data=True,
+	package_data={'optimusbeez': ['optimusbeez/optimal_constants.txt',
+	'optimusbeez/function_info.txt']},
 	classifiers=['Programming Language :: Python :: 3'],
 	install_requires=[
 		'numpy>=1.18.1',
