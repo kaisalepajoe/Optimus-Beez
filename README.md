@@ -2,6 +2,11 @@
 
 This is a Particle Swarm Optimization (PSO) package. The PSO used is the simplest version presented by Maurice Clarc in "Particle Swarm Optimization".
 
+# Installation
+
+Run the following command:
+pip install optimusbeez
+
 # How to use Optimus-Beez
 
 ## Choosing the function to evaluate
@@ -19,3 +24,9 @@ When the random search is completed, you will be asked if you want to overwrite 
 ## Using PSO
 
 The main script is PSO.py. Run this in the command line. You will be asked if you want to change the number of evaluations. If the value you wish to set is much larger or smaller than the default value, it is advised you run optimize_constants.py again. Set the value, or use the default value and wait for the PSO to finish. You will see an animation of your swarm at the end.
+
+## Testing
+
+Nose is used to test the code. All tests are located in the 'tests' folder.To run the tests, execute:
+
+>>> nosetests

@@ -1,0 +1,7 @@
+{
+	"fn_name":"Alpine",
+	"true_position":np.array([0,0]),
+	"xmin":-100,
+	"xmax":100,
+	"show_animation":True			
+}
