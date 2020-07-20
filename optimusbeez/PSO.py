@@ -26,8 +26,11 @@ from .evaluate import evaluate
 def read_dictionary_from_file(filename):
 	try:
 		data = pkgutil.get_data('optimusbeez', filename)
-		dictionary = eval(data)
-		return dictionary
+		try:
+			dictionary = eval(data)
+			return dictionary
+		except:
+			raise TypeError(f"Cannot turn data into dictionary: {data}")
 	except:
 		raise NameError(f"File '{filename}' does not exist in 'optimusbeez' directory")
 
@@ -58,7 +61,6 @@ class Experiment:
 			fn_info = read_dictionary_from_file('fn_info.txt')
 
 		if type(constants) == dict and type(fn_info) == dict:
-
 			self.N = constants["N"]
 			self.time_steps = constants["time_steps"]
 			self.repetitions = constants["repetitions"]
@@ -76,7 +78,6 @@ class Experiment:
 			# Calculate confidence parameters using phi
 			self.c1 = 1/(self.phi-1+np.sqrt(self.phi**2-2*self.phi))
 			self.cmax = self.c1*self.phi
-
 		else:
 			raise TypeError(f"Invalid types {type(constants)} and {type(fn_info)} for constants and fn_info.")
 
@@ -104,7 +105,7 @@ class Experiment:
 				"xmin":self.xmin, "xmax":self.xmax, "show_animation":self.show_animation}
 			return fn_info
 		elif type(dictionary) == dict:
-			constants = dictionary
+			fn_info = dictionary
 			return fn_info
 		else:
 			raise TypeError(f"Invalid type {type(dictionary)} for dictionary")

@@ -4,7 +4,7 @@ import optimusbeez as ob
 import numpy as np
 
 class TestPoint(TestCase):
-
+	# Check zero points
 	def test_Rosenbrock_zero(self):
 		f = ob.evaluate((1,1), "Rosenbrock")
 		self.assertTrue(f==0)
@@ -18,6 +18,7 @@ class TestPoint(TestCase):
 		f = ob.evaluate((0,0), "Ackley")
 		self.assertTrue(f==0)
 
+	# Check non-zero points
 	def test_Rosenbrock_point(self):
 		f = ob.evaluate((4,7), "Rosenbrock")
 		self.assertTrue(f==8109)
@@ -31,6 +32,25 @@ class TestPoint(TestCase):
 		f = ob.evaluate((-2,-2), "Ackley")
 		self.assertTrue(np.isclose(f,6.593599079))
 
-	def test_invalid_fn_name(self):
-		f = ob.evaluate((1,1), "doesnotexist")
-		self.assertTrue(f==None)
+	# Test input types and dimensions
+	def test_invalid_fn_name_type(self):
+		self.assertRaises(TypeError, ob.evaluate, (1,1), ["Griewank"])
+	def test_undefined_fn_name(self):
+		self.assertRaises(ValueError, ob.evaluate, (1,1), "Undefined function")
+	def test_too_many_dimensions_in_position(self):
+		self.assertRaises(ValueError, ob.evaluate, (1,1,1), "Griewank")
+	def test_too_little_dimensions_in_position(self):
+		self.assertRaises(ValueError, ob.evaluate, [1], "Alpine")
+	def test_invalid_pos_type(self):
+		self.assertRaises(TypeError, ob.evaluate, "[1,1]", "Alpine")
+
+	# Test different input types for position
+	def test_tuple_position(self):
+		f = ob.evaluate((4,7), "Rosenbrock")
+		self.assertTrue(f==8109)
+	def test_list_position(self):
+		f = ob.evaluate([4,7], "Rosenbrock")
+		self.assertTrue(f==8109)
+	def test_np_array_position(self):
+		f = ob.evaluate(np.array([4,7]), "Rosenbrock")
+		self.assertTrue(f==8109)
