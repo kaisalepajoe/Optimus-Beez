@@ -24,14 +24,23 @@ from .evaluate import evaluate
 
 # Read and return dictionary from txt file
 def read_dictionary_from_file(filename):
-	data = pkgutil.get_data('optimusbeez', filename)
-	dictionary = eval(data)
-	return dictionary
+	try:
+		data = pkgutil.get_data('optimusbeez', filename)
+		dictionary = eval(data)
+		return dictionary
+	except:
+		raise NameError(f"File '{filename}' does not exist in 'optimusbeez' directory")
 
 def write_dictionary_to_file(dictionary, filepath):
-	file = open(filepath, "w")
-	file.write(str(dictionary))
-	file.close()
+	if type(dictionary) == dict:
+		try:
+			file = open(filepath, "w")
+			file.write(str(dictionary))
+			file.close()
+		except:
+			raise NameError(f"Invalid path: {filepath}. Example path: /home/username/.../filename.txt")
+	else:
+		raise TypeError(f"Invalid type {type(dictionary)} for dictionary")
 
 # Determine error
 def determine_error(found_value, minimum_value=0):
@@ -48,23 +57,28 @@ class Experiment:
 		if fn_info == None:
 			fn_info = read_dictionary_from_file('fn_info.txt')
 
-		self.N = constants["N"]
-		self.time_steps = constants["time_steps"]
-		self.repetitions = constants["repetitions"]
-		self.fn_name = fn_info["fn_name"]
-		self.optimal_f = fn_info["optimal_f"]
-		self.k = constants["k"]
-		self.phi = constants["phi"]
-		self.xmin = fn_info["xmin"]
-		self.xmax = fn_info["xmax"]
-		self.show_animation = fn_info["show_animation"]
+		if type(constants) == dict and type(fn_info) == dict:
 
-		# Calculate maximum velocity
-		self.vmax = abs(self.xmax - self.xmin)/2
+			self.N = constants["N"]
+			self.time_steps = constants["time_steps"]
+			self.repetitions = constants["repetitions"]
+			self.fn_name = fn_info["fn_name"]
+			self.optimal_f = fn_info["optimal_f"]
+			self.k = constants["k"]
+			self.phi = constants["phi"]
+			self.xmin = fn_info["xmin"]
+			self.xmax = fn_info["xmax"]
+			self.show_animation = fn_info["show_animation"]
 
-		# Calculate confidence parameters using phi
-		self.c1 = 1/(self.phi-1+np.sqrt(self.phi**2-2*self.phi))
-		self.cmax = self.c1*self.phi
+			# Calculate maximum velocity
+			self.vmax = abs(self.xmax - self.xmin)/2
+
+			# Calculate confidence parameters using phi
+			self.c1 = 1/(self.phi-1+np.sqrt(self.phi**2-2*self.phi))
+			self.cmax = self.c1*self.phi
+
+		else:
+			raise TypeError(f"Invalid types {type(constants)} and {type(fn_info)} for constants and fn_info.")
 
 	# Return dictionary of current constants if argument 'dictionary' is not given
 	# Update current constants if 'dictionary' is given and return the given dictionary
@@ -72,73 +86,88 @@ class Experiment:
 		if dictionary == None:
 			constants = {'phi': self.phi, 'N': self.N, 'k': self.k, 
 				'time_steps': self.time_steps, 'repetitions': self.repetitions}
-		else:
+			return constants
+		elif type(dictionary) == dict:
 			constants = dictionary
 			self.phi = constants["phi"]
 			self.N = constants["N"]
 			self.k = constants["k"]
 			self.time_steps = constants["time_steps"]
 			self.repetitions = constants["repetitions"]
-		return constants
+			return constants
+		else:
+			raise TypeError(f"Invalid type {type(dictionary)} for dictionary")
 
 	def fn_info(self, dictionary=None):
 		if dictionary == None:
 			fn_info = {"fn_name":self.fn_name, "optimal_f":self.optimal_f,
 				"xmin":self.xmin, "xmax":self.xmax, "show_animation":self.show_animation}
-		else:
+			return fn_info
+		elif type(dictionary) == dict:
 			constants = dictionary
-		return fn_info
+			return fn_info
+		else:
+			raise TypeError(f"Invalid type {type(dictionary)} for dictionary")
 
 	def n_evaluations(self, N=None, time_steps=None, repetitions=None):
 		if N==None or time_steps==None or repetitions==None:
 			n = self.N*self.time_steps*self.repetitions + self.repetitions*self.N
-		else:
+			return n
+		elif type(N) == int and type(time_steps) == int and type(repetitions) == int:
 			n = N*time_steps*repetitions + repetitions*N
-		return n
+			return n
+		else:
+			raise TypeError(f"Invalid types {type(N)}, {type(time_steps)}, {type(repetitions)}\
+				 for N, time_steps, repetitions")
 
 	def generate_random_constants(self, allowed_evaluations, allowed_deviation):
-		# Set minimum and maximum values for search
-		N_min = 3
-		N_max = 30
-		repetitions_min = 1
-		repetitions_max = 30
+		if type(allowed_evaluations) == int and type(allowed_deviation) == int:
+			# Set minimum and maximum values for search
+			N_min = 3
+			N_max = 30
+			repetitions_min = 1
+			repetitions_max = 30
 
-		time_steps_min = 10
-		time_steps_max = allowed_evaluations + allowed_deviation
+			time_steps_min = 10
+			time_steps_max = allowed_evaluations + allowed_deviation
 
-		k_min = 1
-		phi_min = 2.00001
-		phi_max = 2.4
+			k_min = 1
+			phi_min = 2.00001
+			phi_max = 2.4
 
-		# Initiate empty dictionary
-		constants = {}
+			# Initiate empty dictionary
+			constants = {}
 
-		# Set N-t-r grid size
-		NTR = np.ones((N_max - N_min, time_steps_max - time_steps_min, repetitions_max - repetitions_min))
-		# Populate grid with total time steps
-		for n in range(len(NTR)):
-			for t in range(len(NTR[n])):
-				for r in range(len(NTR[n, t])):
-					NTR[n,t,r] = self.n_evaluations(N=n+N_min, time_steps=t+time_steps_min, repetitions=r+repetitions_min)
-		valid_NTR_choices = np.where((NTR >= allowed_evaluations - allowed_deviation) & (NTR < allowed_evaluations + allowed_deviation))
-		valid_NTR_choices = np.array([valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2]])
-		# valid_NTR_choices contains the indices that correspond to parameters
-		# with the allowed total number of time steps
+			# Set N-t-r grid size
+			NTR = np.ones((N_max - N_min, time_steps_max - time_steps_min, repetitions_max - repetitions_min))
+			# Populate grid with total time steps
+			for n in range(len(NTR)):
+				for t in range(len(NTR[n])):
+					for r in range(len(NTR[n, t])):
+						NTR[n,t,r] = self.n_evaluations(N=n+N_min, time_steps=t+time_steps_min, repetitions=r+repetitions_min)
+			valid_NTR_choices = np.where((NTR >= allowed_evaluations - allowed_deviation) & (NTR < allowed_evaluations + allowed_deviation))
+			valid_NTR_choices = np.array([valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2]])
+			# valid_NTR_choices contains the indices that correspond to parameters
+			# with the allowed total number of time steps
 
-		# Set N, time_steps, repetitions
-		n, t, r = valid_NTR_choices[:,np.random.randint(0,valid_NTR_choices.shape[1])]
-		N = n + N_min
-		time_steps = t + time_steps_min
-		repetitions = r + repetitions_min
+			# Set N, time_steps, repetitions
+			n, t, r = valid_NTR_choices[:,np.random.randint(0,valid_NTR_choices.shape[1])]
+			N = n + N_min
+			time_steps = t + time_steps_min
+			repetitions = r + repetitions_min
 
-		# Set parameters
-		constants["phi"] = np.random.uniform(phi_min, phi_max)
-		constants["N"] = N
-		constants["k"] = np.random.randint(k_min, N+1)
-		constants["time_steps"] = time_steps
-		constants["repetitions"] = repetitions
+			# Set parameters
+			constants["phi"] = np.random.uniform(phi_min, phi_max)
+			constants["N"] = N
+			constants["k"] = np.random.randint(k_min, N+1)
+			constants["time_steps"] = time_steps
+			constants["repetitions"] = repetitions
 
-		return constants
+			return constants
+
+		else:
+			raise TypeError(f"Invalid types {type(allowed_evaluations)}, {type(allowed_deviation)}\
+				 for allowed_evaluations and allowed_deviation")
 
 	def optimize_constants(self):
 		print("Set number of tests:")
@@ -219,13 +248,28 @@ class Experiment:
 	def run(self):
 		# Prompt user for input
 		default_evaluations = self.n_evaluations()
-		print(f"Number of evaluations is set to {default_evaluations}")
-		print("Change number of evaluations? Write yes or no:")
-		set_evaluations = input()
-		if set_evaluations == "yes":
-			print("Set maximum number of evaluations:")
-			n_evaluations = int(input())
-			self.time_steps = int((n_evaluations - self.repetitions*self.N)/(self.repetitions*self.N))
+		while True:
+			print(f"Number of evaluations is set to {default_evaluations}")
+			print("Change number of evaluations? Write yes or no:")
+			set_evaluations = input()
+			if set_evaluations == "yes":
+				while True:
+					print("Set maximum number of evaluations:")
+					n_evaluations_input = input()
+					try:
+						n_evaluations = int(n_evaluations_input)
+						break
+					except:
+						print("Invalid input.")
+						continue
+				self.time_steps = int((n_evaluations - self.repetitions*self.N)/(self.repetitions*self.N))
+				break
+			elif set_evaluations == "no":
+				break
+			else:
+				print("Invalid input.")
+				continue
+
 		print("Running algorithm...")
 
 		constants = self.constants()
