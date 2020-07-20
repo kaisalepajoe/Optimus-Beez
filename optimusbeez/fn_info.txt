@@ -1,6 +1,6 @@
 {
-	"fn_name":"Alpine",
-	"true_position":np.array([0,0]),
+	"fn_name":"Rosenbrock",
+	"optimal_f":0,
 	"xmin":-100,
 	"xmax":100,
 	"show_animation":True			

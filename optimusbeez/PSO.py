@@ -28,92 +28,36 @@ def read_dictionary_from_file(filename):
 	dictionary = eval(data)
 	return dictionary
 
-def write_dictionary_to_file(dictionary, filename):
-	file = open(filename, "w")
+def write_dictionary_to_file(dictionary, filepath):
+	file = open(filepath, "w")
 	file.write(str(dictionary))
 	file.close()
 
-# Determine number of repetitions given constants
-def determine_n_evaluations(N, time_steps, repetitions):
-	return N*time_steps*repetitions + repetitions*N
-
-# Choose k informants randomly
-def random_informants(particles):
-	for particle in particles:
-		particle.informants = np.random.choice(particles, particle.k)
-
 # Determine error
-def determine_error(true_position, position):
-	xy_error = abs(true_position - position)
-	error = np.sqrt(xy_error[0]**2 + xy_error[1]**2)
-	return error
-
-def set_random_constants(required_time_steps, allowed_deviation):
-	# Set minimum and maximum values for search
-	N_min = 3
-	N_max = 30
-	repetitions_min = 1
-	repetitions_max = 30
-
-	time_steps_min = 10
-	time_steps_max = required_time_steps + allowed_deviation
-
-	k_min = 1
-	phi_min = 2.00001
-	phi_max = 2.4
-
-	# Initiate empty dictionary
-	constants = {}
-
-	# Set N-t-r grid size
-	NTR = np.ones((N_max - N_min, 2*allowed_deviation, repetitions_max - repetitions_min))
-	# Populate grid with total time steps
-	for n in range(len(NTR)):
-		for t in range(len(NTR[n])):
-			for r in range(len(NTR[n, t])):
-				NTR[n,t,r] = (n+N_min)*(t+time_steps_min)*(r+repetitions_min)
-	valid_NTR_choices = np.where((NTR >= required_time_steps - allowed_deviation) & (NTR <= required_time_steps + allowed_deviation))
-	valid_NTR_choices = np.array([valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2]])
-	# valid_NTR_choices = np.array((zip(valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2])))
-	# valid_NTR_choices contains the indices that correspond to parameters
-	# with the allowed total number of time steps
-
-	# Set N, time_steps, repetitions
-	n, t, r = valid_NTR_choices[:,np.random.randint(0,valid_NTR_choices.shape[1])]
-	N = n + N_min
-	time_steps = t + time_steps_min
-	repetitions = r + repetitions_min
-
-	# Set parameters
-	constants["phi"] = np.random.uniform(phi_min, phi_max)
-	constants["N"] = N
-	constants["k"] = np.random.randint(k_min, N+1)
-	constants["time_steps"] = time_steps
-	constants["repetitions"] = repetitions
-
-	return constants
+def determine_error(found_value, minimum_value=0):
+	return abs(found_value - minimum_value)
 
 ###################################################################
 
 # The training session class is inherited by particles and swarms
-# This class sets the required parameters from constants and function_info
+# This class sets the required parameters from constants and fn_info
 class Experiment:
-	def __init__(self, constants=None, function_info=None):
+	def __init__(self, constants=None, fn_info=None):
 		if constants == None:
 			constants = read_dictionary_from_file('optimal_constants.txt')
-		if function_info == None:
-			function_info = read_dictionary_from_file('function_info.txt')
+		if fn_info == None:
+			fn_info = read_dictionary_from_file('fn_info.txt')
 
 		self.N = constants["N"]
 		self.time_steps = constants["time_steps"]
 		self.repetitions = constants["repetitions"]
-		self.fn_name = function_info["fn_name"]
-		self.true_position = function_info["true_position"]
+		self.fn_name = fn_info["fn_name"]
+		self.optimal_f = fn_info["optimal_f"]
 		self.k = constants["k"]
 		self.phi = constants["phi"]
-		self.xmin = function_info["xmin"]
-		self.xmax = function_info["xmax"]
-		self.show_animation = function_info["show_animation"]
+		self.xmin = fn_info["xmin"]
+		self.xmax = fn_info["xmax"]
+		self.show_animation = fn_info["show_animation"]
 
 		# Calculate maximum velocity
 		self.vmax = abs(self.xmax - self.xmin)/2
@@ -122,41 +66,105 @@ class Experiment:
 		self.c1 = 1/(self.phi-1+np.sqrt(self.phi**2-2*self.phi))
 		self.cmax = self.c1*self.phi
 
-	def constants(self):
-		constants = {'phi': self.phi, 'N': self.N, 'k': self.k, 
-			'time_steps': self.time_steps, 'repetitions': self.repetitions}
+	# Return dictionary of current constants if argument 'dictionary' is not given
+	# Update current constants if 'dictionary' is given and return the given dictionary
+	def constants(self, dictionary=None):
+		if dictionary == None:
+			constants = {'phi': self.phi, 'N': self.N, 'k': self.k, 
+				'time_steps': self.time_steps, 'repetitions': self.repetitions}
+		else:
+			constants = dictionary
+			self.phi = constants["phi"]
+			self.N = constants["N"]
+			self.k = constants["k"]
+			self.time_steps = constants["time_steps"]
+			self.repetitions = constants["repetitions"]
 		return constants
 
-	def function_info(self):
-		function_info = {"fn_name":self.fn_name, "true_position":self.true_position,
-			"xmin":self.xmin, "xmax":self.xmax, "show_animation":self.show_animation}
-		return function_info
-		
+	def fn_info(self, dictionary=None):
+		if dictionary == None:
+			fn_info = {"fn_name":self.fn_name, "optimal_f":self.optimal_f,
+				"xmin":self.xmin, "xmax":self.xmax, "show_animation":self.show_animation}
+		else:
+			constants = dictionary
+		return fn_info
+
+	def n_evaluations(self, N=None, time_steps=None, repetitions=None):
+		if N==None or time_steps==None or repetitions==None:
+			n = self.N*self.time_steps*self.repetitions + self.repetitions*self.N
+		else:
+			n = N*time_steps*repetitions + repetitions*N
+		return n
+
+	def generate_random_constants(self, allowed_evaluations, allowed_deviation):
+		# Set minimum and maximum values for search
+		N_min = 3
+		N_max = 30
+		repetitions_min = 1
+		repetitions_max = 30
+
+		time_steps_min = 10
+		time_steps_max = allowed_evaluations + allowed_deviation
+
+		k_min = 1
+		phi_min = 2.00001
+		phi_max = 2.4
+
+		# Initiate empty dictionary
+		constants = {}
+
+		# Set N-t-r grid size
+		NTR = np.ones((N_max - N_min, time_steps_max - time_steps_min, repetitions_max - repetitions_min))
+		# Populate grid with total time steps
+		for n in range(len(NTR)):
+			for t in range(len(NTR[n])):
+				for r in range(len(NTR[n, t])):
+					NTR[n,t,r] = self.n_evaluations(N=n+N_min, time_steps=t+time_steps_min, repetitions=r+repetitions_min)
+		valid_NTR_choices = np.where((NTR >= allowed_evaluations - allowed_deviation) & (NTR < allowed_evaluations + allowed_deviation))
+		valid_NTR_choices = np.array([valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2]])
+		# valid_NTR_choices contains the indices that correspond to parameters
+		# with the allowed total number of time steps
+
+		# Set N, time_steps, repetitions
+		n, t, r = valid_NTR_choices[:,np.random.randint(0,valid_NTR_choices.shape[1])]
+		N = n + N_min
+		time_steps = t + time_steps_min
+		repetitions = r + repetitions_min
+
+		# Set parameters
+		constants["phi"] = np.random.uniform(phi_min, phi_max)
+		constants["N"] = N
+		constants["k"] = np.random.randint(k_min, N+1)
+		constants["time_steps"] = time_steps
+		constants["repetitions"] = repetitions
+
+		return constants
+
 	def optimize_constants(self):
 		print("Set number of tests:")
 		tests = int(input())
 		print("Set number of repetitions for each constants configuration:")
 		tests_with_each_constants = int(input())
-		print("Set allowed time_steps:")
-		allowed_time_steps = int(input())
-		print("Set allowed deviation from time steps:")
+		print("Set allowed evaluations:")
+		allowed_evaluations = int(input())
+		print("Set allowed deviation from number of evaluations:")
 		allowed_deviation = int(input())
 
 		print("Finding optimal constants...")
 
 		best_error = np.inf
 
-		function_info = self.function_info()
+		fn_info = self.fn_info()
 
 		for t in range(tests):
 			print(f"Test {t+1}/{tests}")
-			random_constants = set_random_constants(allowed_time_steps, allowed_deviation)
+			random_constants = self.generate_random_constants(allowed_evaluations, allowed_deviation)
 
 			errors = np.inf*np.ones(tests_with_each_constants)
 
 			# Repeat several times for this constants configuration		
 			for constants_repetition in range(tests_with_each_constants):
-				swarm = Swarm(random_constants, function_info)
+				swarm = Swarm(random_constants, fn_info)
 				swarm.distribute_swarm()
 				swarm.run_algorithm()
 				errors[constants_repetition] = swarm.error
@@ -181,23 +189,21 @@ class Experiment:
 				self.time_steps = best_constants["time_steps"]
 				self.repetitions = best_constants["repetitions"]
 				self.k = best_constants["k"]
-				self.phi = best_constants["phi"],
+				self.phi = best_constants["phi"]
 				while True:
-					print("Also choose")
-					print("1 to create new file with this configuration")
-					print("2 to overwrite optimal_constants.txt")
-					print("3 to skip")
-					print("Write 1, 2 or 3:")
+					print("Create new txt file with this configuration?")
+					print("Write yes or no:")
 					choice = input()
-					if choice =="1":
-						print("Write a name for the file:")
-						filename = input()
-						write_dictionary_to_file(best_constants, filename)
+					if choice =="yes":
+						print("Write a path for the file:")
+						filepath = input()
+						try:
+							write_dictionary_to_file(best_constants, filepath)
+						except:
+							print("Are you sure you wrote the path correclty?")
+							continue
 						return
-					elif choice == "2":
-						write_dictionary_to_file(best_constants, "optimal_constants.txt")
-						return
-					elif choice =="3":
+					elif choice == "no":
 						return
 					else:
 						print("Invalid input.")
@@ -212,8 +218,7 @@ class Experiment:
 
 	def run(self):
 		# Prompt user for input
-		default_evaluations = determine_n_evaluations(
-			self.N, self.time_steps, self.repetitions) 
+		default_evaluations = self.n_evaluations()
 		print(f"Number of evaluations is set to {default_evaluations}")
 		print("Change number of evaluations? Write yes or no:")
 		set_evaluations = input()
@@ -224,21 +229,21 @@ class Experiment:
 		print("Running algorithm...")
 
 		constants = self.constants()
-		function_info = self.function_info()
+		fn_info = self.fn_info()
 
-		self.swarm = Swarm(constants, function_info)
+		self.swarm = Swarm(constants, fn_info)
 		self.swarm.distribute_swarm()
 		self.swarm.run_algorithm()
-		self.n_evaluations = determine_n_evaluations(self.swarm.N, self.swarm.time_steps, self.swarm.repetitions)
+		n_evaluations = self.swarm.n_evaluations()
 
 		self.best_position = self.swarm.best_position
 		self.best_f = self.swarm.best_f
 		self.error = self.swarm.error
 
-		print(f"{self.n_evaluations} evaluations made.")
+		print(f"{n_evaluations} evaluations made.")
 		print(f"The best position is {self.best_position}.")
 		print(f"The value at this position is {self.best_f}")
-		print(f"Distance from true global minimum: {self.error}")
+		print(f"Error in value: {self.error}")
 
 		if self.show_animation == False:
 			pass
@@ -349,7 +354,7 @@ class Swarm(Experiment):
 		velocities = np.random.uniform(-self.vmax, self.vmax, (self.N, 2))
 
 		constants = self.constants()
-		function_info = self.function_info()
+		fn_info = self.fn_info()
 
 		# Create list of particle objects
 		self.particles = []
@@ -357,16 +362,21 @@ class Swarm(Experiment):
 			pos = initial_positions[i]
 			vel = velocities[i]
 			p = p_values[i]
-			particle = Particle(constants, function_info)
+			particle = Particle(constants, fn_info)
 			particle.set_initial_state(pos, vel, p)
 			self.particles.append(particle)
 
 		# Initiate k informants randomly
-		random_informants(self.particles)
+		self.random_informants()
 
 		# Initialise array of positions for animation
 		self.positions = np.inf*np.ones((self.time_steps, self.N, 2))
 		self.positions[0,:,:] = initial_positions
+
+	# Choose k informants randomly
+	def random_informants(self):
+		for particle in self.particles:
+			particle.informants = np.random.choice(self.particles, particle.k)
 
 	# Update positions of particles for all time steps
 	def evolve(self):
@@ -376,7 +386,7 @@ class Swarm(Experiment):
 				# Update positions for animation
 				self.positions[time_step,i,:] = particle.pos
 			# Select informants for next time step
-			random_informants(self.particles)
+			self.random_informants()
 
 	# Extract optimal parameters (from g-values)
 	def get_parameters(self):
@@ -410,7 +420,7 @@ class Swarm(Experiment):
 
 		self.best_position = results[self.best_value_index][0:2]
 		self.best_f = results[self.best_value_index][2]
-		self.error = determine_error(self.true_position, self.best_position)
+		self.error = determine_error(self.best_f, self.optimal_f)
 
 	def simulate_swarm(self):
 		# Plot initial positions of particles

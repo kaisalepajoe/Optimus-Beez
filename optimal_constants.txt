@@ -1,1 +1,0 @@
-{'phi': 2.185318123653423, 'N': 3, 'k': 3, 'time_steps': 11, 'repetitions': 3}
