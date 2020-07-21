@@ -6,16 +6,13 @@ import numpy as np
 class TestPoint(TestCase):
 	# Check zero points
 	def test_Rosenbrock_zero(self):
-		f = ob.evaluate((1,1), "Rosenbrock")
+		f = ob.evaluate((1,1,1,1,1), "Rosenbrock")
 		self.assertTrue(f==0)
 	def test_Alpine_zero(self):
-		f = ob.evaluate((0,0), "Alpine")
+		f = ob.evaluate((0,0,0,0), "Alpine")
 		self.assertTrue(f==0)
 	def test_Griewank_zero(self):
-		f = ob.evaluate((0,0), "Griewank")
-		self.assertTrue(f==0)
-	def test_Ackley_zero(self):
-		f = ob.evaluate((0,0), "Ackley")
+		f = ob.evaluate((0,0,0), "Griewank")
 		self.assertTrue(f==0)
 
 	# Check non-zero points
@@ -28,19 +25,12 @@ class TestPoint(TestCase):
 	def test_Griewank_point(self):
 		f = ob.evaluate((-3,6), "Griewank")
 		self.assertTrue(np.isclose(f,0.563118157))
-	def test_Ackley_point(self):
-		f = ob.evaluate((-2,-2), "Ackley")
-		self.assertTrue(np.isclose(f,6.593599079))
 
 	# Test input types and dimensions
 	def test_invalid_fn_name_type(self):
 		self.assertRaises(TypeError, ob.evaluate, (1,1), ["Griewank"])
 	def test_undefined_fn_name(self):
 		self.assertRaises(ValueError, ob.evaluate, (1,1), "Undefined function")
-	def test_too_many_dimensions_in_position(self):
-		self.assertRaises(ValueError, ob.evaluate, (1,1,1), "Griewank")
-	def test_too_little_dimensions_in_position(self):
-		self.assertRaises(ValueError, ob.evaluate, [1], "Alpine")
 	def test_invalid_pos_type(self):
 		self.assertRaises(TypeError, ob.evaluate, "[1,1]", "Alpine")
 

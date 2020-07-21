@@ -66,6 +66,7 @@ class Experiment:
 			self.repetitions = constants["repetitions"]
 			self.fn_name = fn_info["fn_name"]
 			self.optimal_f = fn_info["optimal_f"]
+			self.dim = fn_info["dim"]
 			self.k = constants["k"]
 			self.phi = constants["phi"]
 			self.xmin = fn_info["xmin"]
@@ -101,7 +102,7 @@ class Experiment:
 
 	def fn_info(self, dictionary=None):
 		if dictionary == None:
-			fn_info = {"fn_name":self.fn_name, "optimal_f":self.optimal_f,
+			fn_info = {"fn_name":self.fn_name, "optimal_f":self.optimal_f, "dim":self.dim,
 				"xmin":self.xmin, "xmax":self.xmax, "show_animation":self.show_animation}
 			return fn_info
 		elif type(dictionary) == dict:
@@ -347,16 +348,16 @@ class Swarm(Experiment):
 	# Set random positions, velocities, informants, and p-values for all particles
 	def distribute_swarm(self):
 		# Create array of initial positions
-		initial_positions = np.random.uniform(self.xmin, self.xmax, (self.N, 2))
+		initial_positions = np.random.uniform(self.xmin, self.xmax, (self.N, self.dim))
 
 		# Create array of initial p-values by evaluating initial positions
-		p_values = np.inf*np.ones((self.N, 3))
+		p_values = np.inf*np.ones((self.N, self.dim+1))
 		for i, pos in enumerate(initial_positions):
-			p_values[i,2] = evaluate(pos, self.fn_name)
-			p_values[i,0:2] = pos
+			p_values[i,self.dim] = evaluate(pos, self.fn_name)
+			p_values[i,0:self.dim] = pos
 
 		# Create array of random velocities (up to limit)
-		velocities = np.random.uniform(-self.vmax, self.vmax, (self.N, 2))
+		velocities = np.random.uniform(-self.vmax, self.vmax, (self.N, self.dim))
 
 		constants = self.constants()
 		fn_info = self.fn_info()
@@ -375,7 +376,7 @@ class Swarm(Experiment):
 		self.random_informants()
 
 		# Initialise array of positions for animation
-		self.positions = np.inf*np.ones((self.time_steps, self.N, 2))
+		self.positions = np.inf*np.ones((self.time_steps, self.N, self.dim))
 		self.positions[0,:,:] = initial_positions
 
 	# Choose k informants randomly
@@ -395,24 +396,22 @@ class Swarm(Experiment):
 
 	# Extract optimal parameters (from g-values)
 	def get_parameters(self):
-		final_g = np.inf*np.ones((self.N, 3))
+		final_g = np.inf*np.ones((self.N, self.dim+1))
 		for i,particle in enumerate(self.particles):
 			final_g[i,:] = particle.g
-		optimal_i = np.argmin(final_g[:,2])
-		x = final_g[optimal_i, 0]
-		y = final_g[optimal_i, 1]
-		f = final_g[optimal_i, 2]
-		return np.array([x, y, f])
+		optimal_i = np.argmin(final_g[:,self.dim])
+		result = final_g[optimal_i]
+		return result
 
 	# Run the algorithm for required number of repetitions
 	# Return best found position, value, and error
 	def run_algorithm(self):
 
 		# results contains the best found positions and values for each repetition
-		results = np.inf*np.ones((self.repetitions, 3))
+		results = np.inf*np.ones((self.repetitions, self.dim+1))
 		# all_positions contains all the visited positions for each repetition
 		# all_positions is used to create an animation of the swarm
-		self.all_positions = np.inf*np.ones((self.repetitions, self.time_steps, self.N, 2))
+		self.all_positions = np.inf*np.ones((self.repetitions, self.time_steps, self.N, self.dim))
 
 		for r in range(self.repetitions):
 			self.distribute_swarm()
@@ -421,13 +420,16 @@ class Swarm(Experiment):
 			results[r] = result
 			self.all_positions[r] = self.positions
 
-		self.best_value_index = np.argmin(results[:,2])
+		self.best_value_index = np.argmin(results[:,self.dim])
 
-		self.best_position = results[self.best_value_index][0:2]
-		self.best_f = results[self.best_value_index][2]
+		self.best_position = results[self.best_value_index][0:self.dim]
+		self.best_f = results[self.best_value_index][self.dim]
 		self.error = determine_error(self.best_f, self.optimal_f)
 
 	def simulate_swarm(self):
+		# Cannot simulate if dimension > 2
+		if self.dim > 2:
+			return
 		# Plot initial positions of particles
 		fig, ax = plt.subplots()
 		ax.set_xlim(self.xmin, self.xmax)
@@ -473,32 +475,34 @@ class Particle(Experiment):
 	def communicate(self):
 		# Communicate with informants
 		# Receive best positions with values from informants
-		received = np.zeros((self.k, 3))
+		received = np.zeros((self.k, self.dim+1))
 		for i, informant in enumerate(self.informants):
 			received[i, :] = informant.g
 		# Set g to LOWEST value
-		i = np.argmin(received[:,2])
+		i = np.argmin(received[:,self.dim])
 		self.g = received[i]
 
 	# Randomly assign confidence parameters
 	# c2 and c3 in the interval [0, cmax)
 	def random_confidence(self):
-		c2 = np.array([np.random.uniform(0, self.cmax), \
-			np.random.uniform(0, self.cmax)])
-		c3 = np.array([np.random.uniform(0, self.cmax), \
-			np.random.uniform(0, self.cmax)])
+		c2 = np.inf*np.ones(self.dim)
+		c3 = np.inf*np.ones(self.dim)
+
+		for d in range(self.dim):
+			c2[d] = np.random.uniform(0, self.cmax)
+			c3[d] = np.random.uniform(0, self.cmax)
 		return (c2, c3)
 
 	def step(self):
 		# Evaluate current position
 		# Update p if current position is LOWER
 		value = evaluate(self.pos, self.fn_name)
-		if value < self.p[2]:
-			self.p[2] = value
-			self.p[0:2] = self.pos
-		if value < self.g[2]:
-			self.g[2] = value
-			self.g[0:2] = self.pos
+		if value < self.p[self.dim]:
+			self.p[self.dim] = value
+			self.p[0:self.dim] = self.pos
+		if value < self.g[self.dim]:
+			self.g[self.dim] = value
+			self.g[0:self.dim] = self.pos
 
 		# Communicate with informants, update g
 		self.communicate()
@@ -508,10 +512,10 @@ class Particle(Experiment):
 
 		# Update velocity
 		possible_vel = self.c1*self.vel + \
-			c2*(self.p[0:2] - self.pos) + \
-			c3*(self.g[0:2] - self.pos)
+			c2*(self.p[0:self.dim] - self.pos) + \
+			c3*(self.g[0:self.dim] - self.pos)
 		# Constrain velocity
-		for d in range(2):
+		for d in range(self.dim):
 			if abs(possible_vel[d]) <= self.vmax:
 				self.vel[d] = possible_vel[d]
 			elif possible_vel[d] > self.vmax:
@@ -525,7 +529,7 @@ class Particle(Experiment):
 		# Set velocity to 0 if possible_pos
 		# outside search area to avoid touching
 		# the boundary again in the next time step.
-		for d in range(2):
+		for d in range(self.dim):
 			if self.xmin <= possible_pos[d] <= self.xmax:
 				self.pos[d] = possible_pos[d]
 			elif possible_pos[d] < self.xmin:
