@@ -6,7 +6,7 @@ import numpy as np
 class TestExperiment(TestCase):
 	def setUp(self):
 		self.constants = {'phi': 2.4, 'N': 5, 'k': 3, 'time_steps': 10, 'repetitions': 1}
-		self.fn_info = {"fn_name":"Rosenbrock", "optimal_f":0, "xmin":-100, "xmax":100, "show_animation":False}
+		self.fn_info = {"fn_name":"Rosenbrock", "optimal_f":0, "dim":2, "xmin":-100, "xmax":100, "show_animation":False}
 		np.random.seed(123)
 		self.experiment = ob.Experiment(self.constants, self.fn_info)
 
@@ -52,7 +52,7 @@ class TestExperiment(TestCase):
 	def test_fn_info_returns_same_dictionary(self):
 		self.assertTrue(self.experiment.fn_info() == self.fn_info)
 	def test_fn_info_assigns_correct_variables(self):
-		new_fn_info = {"fn_name":"Alpine", "optimal_f":5, "xmin":-300, "xmax":300, "show_animation":True}
+		new_fn_info = {"fn_name":"Alpine", "optimal_f":5, "dim":3, "xmin":-300, "xmax":300, "show_animation":True}
 		self.assertTrue(self.experiment.fn_info(new_fn_info) == new_fn_info)
 
 
@@ -93,7 +93,7 @@ class TestExperiment(TestCase):
 	def test_optimize_constants_save_config_assigned_constants(self):
 		self.experiment.optimize_constants(tests=10, tests_with_each_constants=2, allowed_evaluations=10,\
 			allowed_deviation=5, save_configuration="yes", create_file="no")
-		self.assertTrue(self.experiment.constants() == {'phi': 2.0907483129111455, 'N': 1, 'k': 1, 'time_steps': 1, 'repetitions': 5})
+		self.assertTrue(self.experiment.constants() == {'phi': 2.0016638157533286, 'N': 1, 'k': 1, 'time_steps': 13, 'repetitions': 1})
 
 	def test_optimize_constants_create_file_wrong_input_type(self):
 		self.assertRaises(TypeError, self.experiment.optimize_constants, tests=10, tests_with_each_constants=2, \
@@ -109,15 +109,17 @@ class TestExperiment(TestCase):
 		self.assertRaises(ValueError, self.experiment.run, 2)
 	def test_run_best_position(self):
 		self.experiment.run(1000)
-		comparison_best_position = np.isclose(self.experiment.best_position, [-3.41548961, 11.66760793])
-		self.assertTrue(comparison_best_position.all())
-		self.assertTrue(self.experiment.best_f == 19.496964077915194)
-		self.assertTrue(self.experiment.error == 19.496964077915194)
+		best_position = self.experiment.best_position
+		self.assertTrue(len(best_position) == 2)
+		#comparison = np.isclose(best_position, [-1.93391378  3.74026469])
+		#self.assertTrue(np.all(comparison_best_position))
+		self.assertTrue(self.experiment.best_f == 8.607855935766997)
+		self.assertTrue(self.experiment.error == 8.607855935766997)
 
 class TestSwarm(TestCase):
 	def setUp(self):
 		self.constants = {'phi': 2.4, 'N': 5, 'k': 3, 'time_steps': 10, 'repetitions': 1}
-		self.fn_info = {"fn_name":"Rosenbrock", "optimal_f":0, "xmin":-100, "xmax":100, "show_animation":False}
+		self.fn_info = {"fn_name":"Rosenbrock", "optimal_f":0, "dim":2, "xmin":-100, "xmax":100, "show_animation":False}
 		np.random.seed(123)
 		self.swarm = ob.Swarm(self.constants, self.fn_info)
 		self.swarm.distribute_swarm()
@@ -142,65 +144,66 @@ class TestSwarm(TestCase):
 		self.assertTrue(np.all(comparison))
 
 	def test_run_algorithm_all_positions(self):
-		expected_result = np.array([[[[ 1.63707200e+01, -8.71927599e+01],
-         [-4.39814667e+01,  1.96922873e+00],
-         [-3.09500989e+01,  3.94001959e-01],
-         [ 1.84345570e+00, -5.81931768e+00],
-         [-2.95360666e+00,  1.39934908e+01]],
+		expected_result = np.array([[[[ 46.7991893 , -87.19275988],
+         [-53.49409115,   1.96922873],
+         [ -6.22460003,   0.39400196],
+         [  5.46429236,  -5.81931768],
+         [ -2.95360666,  13.99349076]],
 
-        [[-8.44889795e-01, -8.06893435e+01],
-         [ 5.84739069e-01,  2.84861308e+01],
-         [ 1.01272114e+01, -3.40320100e+01],
-         [-1.84239485e+01, -2.45183861e+01],
-         [-5.18332800e+00,  2.28765549e+01]],
+        [[ 14.58608934, -80.68934346],
+         [-32.08856757,  28.48613077],
+         [ 26.95631477, -34.03201005],
+         [-14.72586541, -24.91144592],
+         [ -5.183328  ,  22.8765549 ]],
 
-        [[-6.25906448e+00, -1.81058741e+01],
-         [ 1.95161031e+01,  1.88464558e+01],
-         [ 2.67250373e+01, -3.63105333e+01],
-         [-1.15636491e+01, -2.21178509e+01],
-         [-2.08805524e+00,  1.33719822e+01]],
+        [[ -2.12735447, -18.10587412],
+         [  2.29895146,  18.04251819],
+         [-12.47866874, -34.12836263],
+         [-11.28348576, -20.71524746],
+         [  0.929358  ,  12.75981039]],
 
-        [[-2.84434813e+00,  1.36480008e+01],
-         [ 9.02345269e+00,  2.01217110e+01],
-         [ 1.54883857e+01, -6.87251990e+00],
-         [ 1.16323932e+01, -1.03723395e+01],
-         [ 1.37504130e-01,  1.47628985e+01]],
+        [[ -5.13901806,  13.05869337],
+         [ 16.79018072,  11.49726951],
+         [-13.18657921,   2.80659838],
+         [ 10.73708493,  -6.57741672],
+         [ -0.62065283,  15.20950349]],
 
-        [[-1.40947031e+00,  2.69911093e+01],
-         [-3.18117522e+00,  2.11041127e+01],
-         [-8.01034857e+00,  3.52421989e+00],
-         [ 5.49781180e+00,  1.10507490e+01],
-         [-7.50629940e-01,  2.13515582e+01]],
+        [[ -6.18301226,  25.4980874 ],
+         [  5.10938824,  -0.65200085],
+         [ -2.77621843,   8.18044838],
+         [ 16.07130018,  -0.48097431],
+         [  0.87787585,  10.64818449]],
 
-        [[-2.44935404e+00,  2.41993872e+01],
-         [-8.29570516e+00,  1.92572126e+01],
-         [-1.61134165e+01,  1.61890940e+01],
-         [-1.26623024e-02,  1.26855140e+01],
-         [-3.45046548e+00,  2.01911919e+01]],
+        [[ -2.39070364,  26.35909118],
+         [ -1.38328562,  -6.95367481],
+         [  1.59825788,  10.43856219],
+         [  2.13562728,   8.30326266],
+         [ -1.03406004,   1.62375638]],
 
-        [[-3.48188858e+00,  1.97923871e+01],
-         [-7.93456748e+00,  1.75646526e+01],
-         [-1.32984091e+01,  1.24791830e+01],
-         [-3.84169416e+00,  6.70468445e+00],
-         [-5.24265697e+00,  2.03246408e+01]],
+        [[ -2.7435565 ,  21.52356464],
+         [ -4.41216889,  -6.05341586],
+         [ -0.68866038,   9.92197179],
+         [ -5.53180636,  11.97436829],
+         [ -2.35251729,  -1.99512403]],
 
-        [[-3.46088361e+00,  1.13342014e+01],
-         [-5.65930991e+00,  1.77171616e+01],
-         [-7.86497594e+00,  6.18068325e+00],
-         [-4.73125421e+00,  8.59090824e+00],
-         [-5.34190607e+00,  2.05830107e+01]],
+        [[ -3.16658587,  21.13084371],
+         [ -3.85445596,   1.81687177],
+         [ -3.01128549,   8.50938161],
+         [ -2.71403666,   8.46501967],
+         [ -1.7403355 ,  -1.82105768]],
 
-        [[-3.45205724e+00,  7.78003701e+00],
-         [-2.47730128e+00,  1.47743006e+01],
-         [-3.79517298e+00,  4.07450123e+00],
-         [-4.30566987e+00,  1.06194534e+01],
-         [-4.51310897e+00,  1.74654840e+01]],
+        [[ -3.3289108 ,  14.15040143],
+         [ -1.26548909,   7.87043598],
+         [ -3.79994892,   7.74786704],
+         [ -1.57063861,   6.73428692],
+         [ -1.43719973,   3.90102459]],
 
-        [[-3.45196978e+00,  9.70935313e+00],
-         [-1.47234342e+00,  1.16539046e+01],
-         [-1.88925073e+00,  4.89304958e+00],
-         [-3.95610401e+00,  1.20633395e+01],
-         [-3.91284298e+00,  1.40990308e+01]]]])
+        [[ -3.01982347,   9.54331179],
+         [ -1.03038617,  10.58393088],
+         [ -2.4731585 ,   7.78272422],
+         [ -2.89682232,   7.55356923],
+         [ -2.17378244,   7.19540922]]]])
+
 
 		self.swarm.run_algorithm()
 		comparison = np.isclose(self.swarm.all_positions, expected_result)
@@ -208,15 +211,15 @@ class TestSwarm(TestCase):
 
 	def test_run_algorithm_best_results(self):
 		self.swarm.run_algorithm()
-		self.assertTrue(np.all(np.isclose(self.swarm.best_position, np.array([-3.46088361, 11.33420137]))))
-		self.assertTrue(self.swarm.best_f == 61.31051109394555)
-		self.assertTrue(self.swarm.error == 61.31051109394555)
+		self.assertTrue(np.all(np.isclose(self.swarm.best_position, np.array([-2.77621843,  8.18044838]))))
+		self.assertTrue(self.swarm.best_f == 36.638364725123814)
+		self.assertTrue(self.swarm.error == 36.638364725123814)
 
 
 class TestParticle(TestCase):
 	def setUp(self):
 		self.constants = {'phi': 2.4, 'N': 5, 'k': 3, 'time_steps': 10, 'repetitions': 1}
-		self.fn_info = {"fn_name":"Rosenbrock", "optimal_f":0, "xmin":-100, "xmax":100, "show_animation":False}
+		self.fn_info = {"fn_name":"Rosenbrock", "optimal_f":0, "dim":2, "xmin":-100, "xmax":100, "show_animation":False}
 		np.random.seed(123)
 		self.swarm = ob.Swarm(self.constants, self.fn_info)
 		self.swarm.distribute_swarm()
@@ -237,8 +240,8 @@ class TestParticle(TestCase):
 	def test_random_confidence(self):
 		c1c2 = self.particle.random_confidence()
 		print(c1c2)
-		c1_comparison = np.isclose(c1c2[0], np.array([0.78360109, 0.02821952]))
-		c2_comparison = np.isclose(c1c2[1], np.array([0.17538296, 0.15539038]))
+		c1_comparison = np.isclose(c1c2[0], np.array([0.78360109, 0.17538296]))
+		c2_comparison = np.isclose(c1c2[1], np.array([0.02821952, 0.15539038]))
 		self.assertTrue(np.all(c1_comparison))
 		self.assertTrue(np.all(c2_comparison))
 
