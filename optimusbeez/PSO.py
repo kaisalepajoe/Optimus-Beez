@@ -13,7 +13,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import pkgutil
-from .evaluate import evaluate
+from .evaluate import Rosenbrock
+from .evaluate import Alpine
+from .evaluate import Griewank
 
 # Set random seed
 # np.random.seed(123)
@@ -353,7 +355,7 @@ class Swarm(Experiment):
 		# Create array of initial p-values by evaluating initial positions
 		p_values = np.inf*np.ones((self.N, self.dim+1))
 		for i, pos in enumerate(initial_positions):
-			p_values[i,self.dim] = evaluate(pos, self.fn_name)
+			p_values[i,self.dim] = eval(self.fn_name)(pos)
 			p_values[i,0:self.dim] = pos
 
 		# Create array of random velocities (up to limit)
@@ -496,7 +498,7 @@ class Particle(Experiment):
 	def step(self):
 		# Evaluate current position
 		# Update p if current position is LOWER
-		value = evaluate(self.pos, self.fn_name)
+		value = eval(self.fn_name)(self.pos)
 		if value < self.p[self.dim]:
 			self.p[self.dim] = value
 			self.p[0:self.dim] = self.pos
@@ -540,6 +542,9 @@ class Particle(Experiment):
 				self.vel[d] = 0
 
 ###################################################################
+
+###################################################################
+
 
 if __name__ == "__main__":
 	experiment = Experiment()

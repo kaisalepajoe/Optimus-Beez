@@ -1,8 +1,1 @@
-{
-	"fn_name":"Rosenbrock",
-	"optimal_f":0,
-	"dim":2,
-	"xmin":-100,
-	"xmax":100,
-	"show_animation":True			
-}
+{"fn_name":"Rosenbrock", "optimal_f":0, "dim":2, "xmin":-100, "xmax":100, "show_animation":True}
