@@ -26,6 +26,11 @@ class TestPoint(TestCase):
 		f = ob.evaluate((-3,6), "Griewank")
 		self.assertTrue(np.isclose(f,0.563118157))
 
+	# Check non-zero multidimensional points
+	def test_Rosenbrock_5dim_point(self):
+		f = ob.evaluate((1,2,3,4,5), "Rosenbrock")
+		self.assertTrue(f==14814)
+
 	# Test input types and dimensions
 	def test_invalid_fn_name_type(self):
 		self.assertRaises(TypeError, ob.evaluate, (1,1), ["Griewank"])
