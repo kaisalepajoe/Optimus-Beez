@@ -4,4 +4,6 @@ from ..PSO import write_dictionary_to_file
 from ..PSO import determine_error
 from ..PSO import Particle
 from ..PSO import Swarm
-from ..PSO import evaluate
+from ..evaluate import Rosenbrock
+from ..evaluate import Alpine
+from ..evaluate import Griewank

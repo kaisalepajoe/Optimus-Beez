@@ -1,8 +1,1 @@
-{
-	"fn_name":"Rosenbrock",
-	"optimal_f":0,
-	"dim":2,
-	"xmin":-100,
-	"xmax":100,
-	"show_animation":True			
-}
+{"fn_name":"Rosenbrock", "optimal_f":0, "dim":2, "xmin":[-100,-100], "xmax":[100,100], "param_is_integer":[False, False], "special_constraints":False, "constraints_function":None, "constraints_extra_arguments":[], "show_animation":False, "disable_progress_bar":False}

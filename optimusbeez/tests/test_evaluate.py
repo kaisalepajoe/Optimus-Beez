@@ -6,23 +6,24 @@ import numpy as np
 class TestPoint(TestCase):
 	# Check zero points
 	def test_Rosenbrock_zero(self):
-		f = ob.evaluate((1,1,1,1,1), "Rosenbrock")
+		f = ob.Rosenbrock((1,1,1,1,1))
 		self.assertTrue(f==0)
 	def test_Alpine_zero(self):
-		f = ob.evaluate((0,0,0,0), "Alpine")
+		f = ob.Alpine((0,0,0,0))
 		self.assertTrue(f==0)
 	def test_Griewank_zero(self):
-		f = ob.evaluate((0,0,0), "Griewank")
+		f = ob.Griewank((0,0,0))
 		self.assertTrue(f==0)
 
 	# Check non-zero points
 	def test_Rosenbrock_point(self):
-		f = ob.evaluate((4,7), "Rosenbrock")
+		f = ob.Rosenbrock((4,7))
 		self.assertTrue(f==8109)
 	def test_Alpine_point(self):
-		f = ob.evaluate((15,4), "Alpine")
+		f = ob.Alpine((15,4))
 		self.assertTrue(np.isclose(f,13.88152758,))
 	def test_Griewank_point(self):
+
 		f = ob.evaluate((-3,6), "Griewank")
 		self.assertTrue(np.isclose(f,0.563118157))
 
