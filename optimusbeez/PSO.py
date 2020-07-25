@@ -130,6 +130,7 @@ class Experiment:
 			self.constraints_function = fn_info["constraints_function"]
 			self.constraints_extra_arguments = fn_info["constraints_extra_arguments"]
 			self.disable_progress_bar = fn_info["disable_progress_bar"]
+			self.get_parameters_from = fn_info["get_parameters_from"]
 
 			# Calculate maximum velocity
 			self.vmax = np.absolute(self.xmax - self.xmin)/2
@@ -168,7 +169,8 @@ class Experiment:
 				"constraints_function":self.constraints_function,
 				"constraints_extra_arguments":self.constraints_extra_arguments,
 				"show_animation":self.show_animation,
-				"disable_progress_bar":self.disable_progress_bar}
+				"disable_progress_bar":self.disable_progress_bar,
+				"get_parameters_from": self.get_parameters_from}
 			return fn_info
 		elif type(dictionary) == dict:
 			fn_info = dictionary
@@ -293,13 +295,19 @@ class Swarm(Experiment):
 			self.random_informants()
 
 
-	# Extract optimal parameters (from g-values)
+	# Extract optimal parameters
 	def get_parameters(self):
-		final_g = np.inf*np.ones((self.N, self.dim+1))
-		for i,particle in enumerate(self.particles):
-			final_g[i,:] = particle.g
-		optimal_i = np.argmin(final_g[:,self.dim])
-		result = final_g[optimal_i]
+		if self.get_parameters_from == "g-values":
+			final_g = np.inf*np.ones((self.N, self.dim+1))
+			for i,particle in enumerate(self.particles):
+				final_g[i,:] = particle.g
+			optimal_i = np.argmin(final_g[:,self.dim])
+			result = final_g[optimal_i]
+		if self.get_parameters_from == "average p-values":
+			final_p = np.inf*np.ones((self.N, self.dim+1))
+			for i,particle in enumerate(self.particles):
+				final_p[i,:] = particle.p 
+			result = np.average(final_p, axis=0)
 		return result
 
 	# Run the algorithm for required number of repetitions
@@ -329,11 +337,12 @@ class Swarm(Experiment):
 	def simulate_swarm(self):
 		# If dim > 2, then only first 2 axes will be silmulated
 		# Plot initial positions of particles
+		#Testing: changed axes to plot N and r values
 		fig, ax = plt.subplots()
-		ax.set_xlim(self.xmin[0], self.xmax[0])
-		ax.set_ylim(self.xmin[1], self.xmax[1])
-		scat = ax.scatter(self.all_positions[self.best_value_index,0,:,0], 
-			self.all_positions[self.best_value_index,0,:,1], color="Black", s=2)
+		ax.set_xlim(self.xmin[2], self.xmax[2])
+		ax.set_ylim(self.xmin[4], self.xmax[4])
+		scat = ax.scatter(self.all_positions[self.best_value_index,0,:,2], 
+			self.all_positions[self.best_value_index,0,:,4], color="Black", s=2)
 
 		# Create animation
 		interval = 200_000 / (self.N * self.time_steps * self.repetitions)
@@ -345,7 +354,7 @@ class Swarm(Experiment):
 	def update_frames(self, j, *fargs):
 		scat, all_positions, best_value_index = fargs
 		try:
-			scat.set_offsets(all_positions[best_value_index,j,:,0:2])
+			scat.set_offsets(all_positions[best_value_index,j,:,2:5:2])
 		except:
 			print("Simulation finished")
 			self.animation.event_source.stop()
@@ -376,9 +385,12 @@ class Particle(Experiment):
 		received = np.zeros((self.k, self.dim+1))
 		for i, informant in enumerate(self.informants):
 			received[i, :] = informant.g
-		# Set g to LOWEST value
+		# Find best g from communicated values
 		i = np.argmin(received[:,self.dim])
-		self.g = received[i]
+		best_received_g = received[i]
+		# Set g to LOWEST value
+		if best_received_g[-1] < self.g[-1]:
+			self.g = best_received_g
 
 	# Randomly assign confidence parameters
 	# c2 and c3 in the interval [0, cmax)
@@ -451,13 +463,14 @@ class Particle(Experiment):
 
 
 ###################################################################
-def optimize_constants(allowed_evaluations=500, allowed_deviation=20, optimization_iterations=30):
+def optimize_constants(allowed_evaluations=500, allowed_deviation=20, optimization_time_steps=100,
+	optimization_repetitions=5):
 	# Note that this function optimizes for the function and search space given in
 	# the file fn_info.txt
 	# If you change this file, make sure to set show_animation to False
 
-	optimal_experiment_constants = {'phi': 2.4, 'k':3, 'N': 15, 'time_steps': optimization_iterations,
-		'repetitions': 1}
+	optimal_experiment_constants = {'phi': 2.4, 'k':3, 'N': 15, 'time_steps': optimization_time_steps,
+		'repetitions':optimization_repetitions}
 
 	phi_min = 2.00001
 	phi_max = 3
@@ -479,7 +492,7 @@ def optimize_constants(allowed_evaluations=500, allowed_deviation=20, optimizati
 		 "xmin":xmin, "xmax":xmax, "param_is_integer":param_is_integer,\
 		 "special_constraints":True, "constraints_function":"Ntr_constrain_next_position",\
 		 "constraints_extra_arguments":[allowed_evaluations,allowed_deviation], "show_animation":True,
-		 "disable_progress_bar":False}
+		 "disable_progress_bar":False, "get_parameters_from":"average p-values"}
 
 	optimal_experiment = Experiment(optimal_experiment_constants, optimal_experiment_fn_info)
 
