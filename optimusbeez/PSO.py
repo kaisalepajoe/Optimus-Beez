@@ -335,6 +335,7 @@ class Swarm(Experiment):
 		scat = ax.scatter(self.all_positions[self.best_value_index,0,:,0], 
 			self.all_positions[self.best_value_index,0,:,1], color="Black", s=2)
 
+
 		# Create animation
 		interval = 200_000 / (self.N * self.time_steps * self.repetitions)
 		self.animation = FuncAnimation(fig, func=self.update_frames, interval=interval, 
@@ -345,7 +346,9 @@ class Swarm(Experiment):
 	def update_frames(self, j, *fargs):
 		scat, all_positions, best_value_index = fargs
 		try:
+
 			scat.set_offsets(all_positions[best_value_index,j,:,0:2])
+
 		except:
 			print("Simulation finished")
 			self.animation.event_source.stop()
