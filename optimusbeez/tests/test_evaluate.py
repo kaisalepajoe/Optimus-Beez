@@ -23,11 +23,7 @@ class TestPoint(TestCase):
 		f = ob.Alpine((15,4))
 		self.assertTrue(np.isclose(f,13.88152758,))
 	def test_Griewank_point(self):
-<<<<<<< HEAD
 		f = ob.Griewank((-3,6))
-		self.assertTrue(np.isclose(f,0.563118157))
-=======
-		f = ob.evaluate((-3,6), "Griewank")
 		self.assertTrue(np.isclose(f,0.563118157))
 
 	# Check non-zero multidimensional points
@@ -53,4 +49,3 @@ class TestPoint(TestCase):
 	def test_np_array_position(self):
 		f = ob.evaluate(np.array([4,7]), "Rosenbrock")
 		self.assertTrue(f==8109)
->>>>>>> c7f69704df42b03c5b1813dcd6edbfd3c71ea5bc

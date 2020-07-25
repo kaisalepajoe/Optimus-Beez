@@ -335,26 +335,14 @@ class Swarm(Experiment):
 		self.error = determine_error(self.best_f, self.optimal_f)
 
 	def simulate_swarm(self):
-<<<<<<< HEAD
-		# If dim > 2, then only first 2 axes will be silmulated
-=======
-		# This function only plots the first 2 values of position - 2D plot
 
->>>>>>> c7f69704df42b03c5b1813dcd6edbfd3c71ea5bc
 		# Plot initial positions of particles
 		#Testing: changed axes to plot N and r values
 		fig, ax = plt.subplots()
-<<<<<<< HEAD
 		ax.set_xlim(self.xmin[2], self.xmax[2])
 		ax.set_ylim(self.xmin[4], self.xmax[4])
 		scat = ax.scatter(self.all_positions[self.best_value_index,0,:,2], 
 			self.all_positions[self.best_value_index,0,:,4], color="Black", s=2)
-=======
-		ax.set_xlim(self.xmin, self.xmax)
-		ax.set_ylim(self.xmin, self.xmax)
-		scat = ax.scatter(self.all_positions[self.best_value_index,0,:,-2], 
-			self.all_positions[self.best_value_index,0,:,-1], color="Black", s=2)
->>>>>>> c7f69704df42b03c5b1813dcd6edbfd3c71ea5bc
 
 		# Create animation
 		interval = 200_000 / (self.N * self.time_steps * self.repetitions)
@@ -366,11 +354,7 @@ class Swarm(Experiment):
 	def update_frames(self, j, *fargs):
 		scat, all_positions, best_value_index = fargs
 		try:
-<<<<<<< HEAD
 			scat.set_offsets(all_positions[best_value_index,j,:,2:5:2])
-=======
-			scat.set_offsets(all_positions[best_value_index,j,:,-2:])
->>>>>>> c7f69704df42b03c5b1813dcd6edbfd3c71ea5bc
 		except:
 			print("Simulation finished")
 			self.animation.event_source.stop()
