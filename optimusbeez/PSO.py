@@ -14,6 +14,9 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import pkgutil
+import io
+import sys
+from tqdm import tqdm
 from .evaluate import Rosenbrock
 from .evaluate import Alpine
 from .evaluate import Griewank
@@ -68,50 +71,35 @@ def generate_random_constants(allowed_evaluations, allowed_deviation):
 	if allowed_deviation < 0:
 		raise ValueError(f"Allowed deviation cannot be less than 0")
 
+	max_n_evaluations = allowed_evaluations + allowed_deviation
+
 	# Set minimum and maximum values for search
-	phi_min = 2.00001
-	phi_max = 3
-	k_min = 1
-	N_min = 1
-	N_max = 30
-	time_steps_min = 1
-	time_steps_max = allowed_evaluations + allowed_deviation
-	repetitions_min = 1
-	repetitions_max = 30
+	constants_min = np.array([2.0001,1,1,1,1])
+	constants_max = np.array([3,None,max_n_evaluations,max_n_evaluations,max_n_evaluations])
 
-	# Initiate empty dictionary
+	# Initiate empty constants array
 	constants = np.inf*np.ones(5)
+	# Set phi, which does not depend on other values
+	constants[0] = np.random.uniform(constants_min[0], constants_max[0])
+	# n_evaluations = Ntr + Nr = Nr(t+1)
+	# Choose N and r randomly from a geometric distribution
+	while True:
+		Nr = np.random.geometric(0.05, 2)
+		# Check that it is possible to be below max_n_evaluations with this Nr
+		if max_n_evaluations/(Nr[0]*Nr[1]) > 2:
+			constants[2] = Nr[0]
+			constants[4] = Nr[1]
+			break
+		else:
+			continue
+	# Choose t uniformly
+	max_time_steps = max_n_evaluations/(constants[2]*constants[4])
+	constants[3] = np.random.randint(1,max_time_steps)
 
-	# Set N-t-r grid size
-	NTR = np.ones((N_max-N_min+1, time_steps_max-time_steps_min+1, \
-		repetitions_max-repetitions_min+1))
-	# Populate grid with total time steps
-	for n in range(len(NTR)):
-		for t in range(len(NTR[n])):
-			for r in range(len(NTR[n, t])):
-				NTR[n,t,r] = n_evaluations(N=n+N_min,
-					time_steps=t+time_steps_min,
-					repetitions=r+repetitions_min)
-	valid_NTR_choices = np.where((NTR >= (allowed_evaluations - allowed_deviation)) \
-		& (NTR <= (allowed_evaluations + allowed_deviation)))
-	valid_NTR_choices = np.array([valid_NTR_choices[0], valid_NTR_choices[1], valid_NTR_choices[2]])
-	# valid_NTR_choices contains the indices that correspond to parameters
-	# with the allowed total number of time steps
+	# Set k, which cannot be greater than N
+	constants[1] = np.random.randint(constants_min[1], constants[2]+1)
 
-	# Set N, time_steps, repetitions
-	n, t, r = valid_NTR_choices[:,np.random.randint(0,valid_NTR_choices.shape[1])]
-	N = n + N_min
-	time_steps = t + time_steps_min
-	repetitions = r + repetitions_min
-
-	# Set parameters
-	constants[0] = np.random.uniform(phi_min, phi_max)
-	constants[1] = np.random.randint(k_min, N+1)
-	constants[2] = N
-	constants[3] = time_steps
-	constants[4] = repetitions
-
-	print(f"Generated random constants: {constants}")
+	# print(f"Generated random constants: {constants}")
 	return constants
 
 ###################################################################
@@ -141,6 +129,7 @@ class Experiment:
 			self.special_constraints = fn_info["special_constraints"]
 			self.constraints_function = fn_info["constraints_function"]
 			self.constraints_extra_arguments = fn_info["constraints_extra_arguments"]
+			self.disable_progress_bar = fn_info["disable_progress_bar"]
 
 			# Calculate maximum velocity
 			self.vmax = np.absolute(self.xmax - self.xmin)/2
@@ -148,6 +137,7 @@ class Experiment:
 			# Calculate confidence parameters using phi
 			self.c1 = 1/(self.phi-1+np.sqrt(self.phi**2-2*self.phi))
 			self.cmax = self.c1*self.phi
+
 		else:
 			raise TypeError(f"Invalid types {type(constants)} and {type(fn_info)} for constants and fn_info.")
 
@@ -177,13 +167,17 @@ class Experiment:
 				"special_constraints":self.special_constraints,
 				"constraints_function":self.constraints_function,
 				"constraints_extra_arguments":self.constraints_extra_arguments,
-				"show_animation":self.show_animation}
+				"show_animation":self.show_animation,
+				"disable_progress_bar":self.disable_progress_bar}
 			return fn_info
 		elif type(dictionary) == dict:
 			fn_info = dictionary
 			return fn_info
 		else:
 			raise TypeError(f"Invalid type {type(dictionary)} for dictionary")
+
+	def n_evaluations(self):
+		return n_evaluations(self.N, self.time_steps, self.repetitions)
 
 	def run(self, max_n_evaluations=None):
 		if max_n_evaluations == None:
@@ -208,7 +202,7 @@ class Experiment:
 		self.error = self.swarm.error
 
 		print(f"{true_n_evaluations} evaluations made.")
-		print(f"The best position is {self.best_position}.")
+		print(f"The best position is {repr(self.best_position.tolist())}.")
 		print(f"The value at this position is {self.best_f}")
 		print(f"Error in value: {self.error}")
 
@@ -286,13 +280,18 @@ class Swarm(Experiment):
 
 	# Update positions of particles for all time steps
 	def evolve(self):
-		for time_step in range(self.time_steps):
+		# With progress bar
+		# Evolve swarm for all time steps
+		for time_step in tqdm(range(self.time_steps),
+			desc=f"Repetition {self.current_repetition}/{self.repetitions}: Evolving swarm",
+			disable=self.disable_progress_bar):
 			for i, particle in enumerate(self.particles):
 				particle.step()
 				# Update positions for animation
 				self.positions[time_step,i,:] = particle.pos
 			# Select informants for next time step
 			self.random_informants()
+
 
 	# Extract optimal parameters (from g-values)
 	def get_parameters(self):
@@ -314,7 +313,7 @@ class Swarm(Experiment):
 		self.all_positions = np.inf*np.ones((self.repetitions, self.time_steps, self.N, self.dim))
 
 		for r in range(self.repetitions):
-			print(f"{r+1}/{self.repetitions}")
+			self.current_repetition = r+1
 			self.distribute_swarm()
 			self.evolve()
 			result = self.get_parameters()
@@ -479,7 +478,8 @@ def optimize_constants(allowed_evaluations=500, allowed_deviation=20, optimizati
 	optimal_experiment_fn_info = {"fn_name":evaluation_function_name, "optimal_f":0, "dim":5,\
 		 "xmin":xmin, "xmax":xmax, "param_is_integer":param_is_integer,\
 		 "special_constraints":True, "constraints_function":"Ntr_constrain_next_position",\
-		 "constraints_extra_arguments":[allowed_evaluations,allowed_deviation], "show_animation":True}
+		 "constraints_extra_arguments":[allowed_evaluations,allowed_deviation], "show_animation":True,
+		 "disable_progress_bar":False}
 
 	optimal_experiment = Experiment(optimal_experiment_constants, optimal_experiment_fn_info)
 
@@ -488,6 +488,9 @@ def optimize_constants(allowed_evaluations=500, allowed_deviation=20, optimizati
 
 	optimal_constants = position_to_constants_dictionary(optimal_experiment.best_position)
 
+	# Restore printing
+	sys.stdout = sys.__stdout__
+
 	print(f"Constants optimization finished.")
 	print(f"The best found constants configuration is {optimal_constants}")
 	print(f"This configuration has the error {optimal_experiment.best_f}")
@@ -495,15 +498,16 @@ def optimize_constants(allowed_evaluations=500, allowed_deviation=20, optimizati
 	return optimal_constants
 
 def constant_optimization_evaluation_function(new_constants):
-	constants = {}
-	constants["phi"] = new_constants[0]
-	constants["k"] = math.ceil(new_constants[1])
-	constants["N"] = math.ceil(new_constants[2])
-	constants["time_steps"] = math.ceil(new_constants[3])
-	constants["repetitions"] = math.ceil(new_constants[4])
+	# Suppress printing
+	text_trap = io.StringIO()
+	sys.stdout = text_trap
+
+	constants = position_to_constants_dictionary(new_constants)
 	# Function info is default from function_info.txt
 	experiment = Experiment(constants=constants)
+	experiment.disable_progress_bar = True
 	experiment.run()
+
 	return experiment.error
 
 def Ntr_constrain_next_position(particle, extra_arguments):
@@ -539,6 +543,11 @@ def Ntr_constrain_next_position(particle, extra_arguments):
 			break
 		else:
 			continue
+
+	# Further constrain k to be less than or equal to N
+	if new_pos[1] > new_pos[2]:
+		new_pos[1] = new_pos[2]
+
 	# Convert required constants to integers
 	for constant in range(1,5):
 		new_pos[constant] = math.ceil(new_pos[constant])
@@ -552,10 +561,10 @@ def position_to_constants_dictionary(position):
 		raise ValueError(f"The position {position} cannot be turned into a constants dictionary")
 	constants = {}
 	constants["phi"] = position[0]
-	constants["k"] = position[1]
-	constants["N"] = position[2]
-	constants["time_steps"] = position[3]
-	constants["repetitions"] = position[4]
+	constants["k"] = int(position[1])
+	constants["N"] = int(position[2])
+	constants["time_steps"] = int(position[3])
+	constants["repetitions"] = int(position[4])
 
 	return constants
 
