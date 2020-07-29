@@ -8,6 +8,7 @@ from .PSO import position_to_constants_dictionary
 from .PSO import Particle
 from .PSO import Swarm
 from .PSO import optimize_constants
+from .PSO import evaluate_experiment
 from .evaluate import Rosenbrock
 from .evaluate import Alpine
 from .evaluate import Griewank
