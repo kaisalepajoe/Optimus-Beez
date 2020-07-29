@@ -190,7 +190,6 @@ def generate_random_constants(allowed_evaluations, allowed_deviation):
 	# Set k, which cannot be greater than N
 	constants[1] = np.random.randint(constants_min[1], constants[2]+1)
 
-	# print(f"Generated random constants: {constants}")
 	return constants
 
 ###################################################################
@@ -504,13 +503,8 @@ class Swarm(Experiment):
 					initial_positions[:,d] = np.random.uniform(self.xmin[d], self.xmax[d], self.N)
 			# Note that these positions are all of type np.float64 even though randint is called
 		else:
-			# This should be modifiable automatically fix
 			for particle in range(self.N):
-				particle1 = Particle()
-				initial_positions[particle] = eval(self.constraints_function)(particle1, self.constraints_extra_arguments)
-			# Set the is_initial_positions to False so the constraints function
-			# can generate next positions on the next time step
-			self.constraints_extra_arguments[0] = False
+				initial_positions[particle] = eval(self.constraints_function)(None, self.constraints_extra_arguments)
 
 		return initial_positions
 
@@ -550,11 +544,16 @@ class Swarm(Experiment):
 		-------
 		None
 		'''
+
 		# Create array of initial p-values by evaluating initial positions
 		p_values = np.inf*np.ones((self.N, self.dim+1))
 		for i, pos in enumerate(initial_positions):
-			p_values[i,self.dim] = eval(self.fn_name)(pos)
-			p_values[i,0:self.dim] = pos
+			p_values[i,0:self.dim] = pos		
+			if self.special_constraints == True:
+				value = eval(self.fn_name)(pos)
+			else:
+				value = eval(self.fn_name)(pos)
+			p_values[i,self.dim] = value
 
 		constants = self.constants()
 		fn_info = self.fn_info()
@@ -776,7 +775,7 @@ class Swarm(Experiment):
 		try:
 			scat.set_offsets(all_positions[best_value_index,j,:,0:2])
 		except:
-			print("animation finished")
+			print("Animation finished.")
 			self.animation.event_source.stop()
 
 ###################################################################
@@ -964,6 +963,8 @@ class Particle(Experiment):
 		None
 		'''
 		if self.special_constraints == True:
+			# Set is_initial_positions to False
+			self.constraints_extra_arguments[0] = False
 			next_pos, vel = eval(self.constraints_function)(self, self.constraints_extra_arguments)
 			self.pos = next_pos
 			self.vel = vel
@@ -1045,7 +1046,7 @@ def evaluate_experiment(experiment, n_evaluations, n_iterations):
 	The standard deviation of the results.
 	'''
 	results = np.inf*np.ones(n_iterations)
-	for n in tqdm(range(n_iterations), desc='Testing function'):
+	for n in tqdm(range(n_iterations), desc='Testing'):
 
 		# Disable printing
 		experiment.disable_progress_bar = True
@@ -1254,12 +1255,10 @@ def Ntr_constrain_position(particle, extra_arguments):
 
 	# Check if initial positions are required
 	if is_initial_positions == True:
-		print("Generating initial positions")
 		initial_positions = generate_random_constants(allowed_evaluations, allowed_deviation)
 		return initial_positions
 
 	else:
-		print("Generating next positions")
 		allowed_n_evaluations = allowed_evaluations + allowed_deviation
 
 		previous_pos = particle.pos
