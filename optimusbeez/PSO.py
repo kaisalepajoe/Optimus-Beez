@@ -174,6 +174,9 @@ def generate_random_constants(allowed_evaluations, allowed_deviation):
 	constants[0] = np.random.uniform(constants_min[0], constants_max[0])
 	# n_evaluations = Ntr + Nr = Nr(t+1)
 	# Choose N and r randomly from a geometric distribution
+	# This method generally works very quickly but it has the potential of becoming a semi-infinite loop
+	# To avoid this, the number of iterations is limited to 1000
+	allowed_while_loop_iterations = 0
 	while True:
 		Nr = np.random.geometric(0.05, 2)
 		# Check that it is possible to be below allowed_n_evaluations with this Nr
@@ -182,6 +185,9 @@ def generate_random_constants(allowed_evaluations, allowed_deviation):
 			constants[4] = Nr[1]
 			break
 		else:
+			allowed_while_loop_iterations += 1
+			if allowed_while_loop_iterations > 1000:
+				raise ValueError(f"Could not randomly generate constants for {allowed_n_evaluations} evaluations. Are you sure this number is not too small?")
 			continue
 	# Choose t uniformly
 	max_time_steps = allowed_n_evaluations/(constants[2]*constants[4])
@@ -942,12 +948,10 @@ class Particle(Experiment):
 
 		# Constrain velocity
 		smaller_than_vmax = possible_vel < self.vmax
+		possible_vel = np.where(smaller_than_vmax, possible_vel, self.vmax)
 		greater_than_neg_vmax = possible_vel > -self.vmax
-		vel_comparison = np.zeros((len(self.vmax), 2))
-		vel_comparison[:,0] = smaller_than_vmax
-		vel_comparison[:,1] = greater_than_neg_vmax
-		vel_comparison = np.all(vel_comparison, axis=1)
-		self.vel = np.where(vel_comparison, possible_vel, self.vel)
+		possible_vel = np.where(greater_than_neg_vmax, possible_vel, -self.vmax)
+		self.vel = possible_vel
 	
 	def set_pos(self):
 		'''
@@ -1075,6 +1079,8 @@ def evaluate_experiment(experiment, n_evaluations, n_iterations):
 	print(f"with a standard deviation of {standard_deviation}")
 
 	plt.hist(results, 100, (0, 10))
+	plt.xlabel('Final value')
+	plt.ylabel('Number of occurrences')
 	plt.show()
 	return avg_result, standard_deviation
 
@@ -1116,11 +1122,12 @@ def optimize_constants(allowed_evaluations=500, allowed_deviation=20,\
 	'''
 
 	# These are for the constant optimization Experiment
-	optimal_experiment_constants = {'phi': 2.4, 'k':7, 'N': 15, 'time_steps': optimization_time_steps,
+	optimal_experiment_constants = {'phi': 2.4, 'k':3, 'N': 15, 'time_steps': optimization_time_steps,
 		'repetitions':optimization_repetitions}
 
 	phi_min = 2.00001
-	phi_max = 3
+	# Testing larger phi_max
+	phi_max = 5
 	k_min = 1
 	N_min = 1
 	N_max = 30

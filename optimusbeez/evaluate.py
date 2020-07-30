@@ -4,10 +4,13 @@ import numpy as np
 
 def Rosenbrock(pos):
 	dim = len(pos)
+	# Change the Rosenbrock parameters a and b
+	a = 1
+	b = 100
 
 	f = 0
 	for d in range(dim-1):
-		f += 100*(pos[d+1]-pos[d]**2)**2 + (1-pos[d])**2
+		f += b*(pos[d+1]-pos[d]**2)**2 + (a-pos[d])**2
 
 	return f
 

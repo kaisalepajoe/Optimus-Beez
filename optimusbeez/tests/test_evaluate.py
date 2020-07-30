@@ -28,24 +28,5 @@ class TestPoint(TestCase):
 
 	# Check non-zero multidimensional points
 	def test_Rosenbrock_5dim_point(self):
-		f = ob.evaluate((1,2,3,4,5), "Rosenbrock")
+		f = ob.Rosenbrock((1,2,3,4,5))
 		self.assertTrue(f==14814)
-
-	# Test input types and dimensions
-	def test_invalid_fn_name_type(self):
-		self.assertRaises(TypeError, ob.evaluate, (1,1), ["Griewank"])
-	def test_undefined_fn_name(self):
-		self.assertRaises(ValueError, ob.evaluate, (1,1), "Undefined function")
-	def test_invalid_pos_type(self):
-		self.assertRaises(TypeError, ob.evaluate, "[1,1]", "Alpine")
-
-	# Test different input types for position
-	def test_tuple_position(self):
-		f = ob.evaluate((4,7), "Rosenbrock")
-		self.assertTrue(f==8109)
-	def test_list_position(self):
-		f = ob.evaluate([4,7], "Rosenbrock")
-		self.assertTrue(f==8109)
-	def test_np_array_position(self):
-		f = ob.evaluate(np.array([4,7]), "Rosenbrock")
-		self.assertTrue(f==8109)
