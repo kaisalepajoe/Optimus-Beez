@@ -32,3 +32,7 @@ def Griewank(pos):
 	product = np.prod(to_multiply)
 	f = f - product
 	return f
+
+def RandomMotion(pos):
+	# Flat surface
+	return 1

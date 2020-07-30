@@ -20,6 +20,7 @@ from tqdm import tqdm
 from .evaluate import Rosenbrock
 from .evaluate import Alpine
 from .evaluate import Griewank
+from .evaluate import RandomMotion
 
 # Set random seed
 # np.random.seed(123)
