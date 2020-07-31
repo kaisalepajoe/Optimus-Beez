@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
 	name = 'optimusbeez',
-	version = '0.0.8',
+	version = '0.0.9',
 	description = 'Simple Particle Swarm Optimization',
 	long_description = long_description,
 	long_description_content_type = 'text/markdown',
@@ -20,8 +20,9 @@ setup(
 	'optimusbeez/function_info.txt']},
 	classifiers=['Programming Language :: Python :: 3'],
 	install_requires=[
-		'numpy>=1.18.1',
-		'matplotlib>=3.1.3',
+		'numpy',
+		'matplotlib',
+		'tqdm'
 		],
 	test_suite='nose.collector',
 	tests_require=['nose']

@@ -22,9 +22,6 @@ from .evaluate import Alpine
 from .evaluate import Griewank
 from .evaluate import RandomMotion
 
-# Set random seed
-# np.random.seed(123)
-
 ###################################################################
 
 # Helper functions
@@ -1127,7 +1124,6 @@ def optimize_constants(allowed_evaluations=500, allowed_deviation=20,\
 		'repetitions':optimization_repetitions}
 
 	phi_min = 2.00001
-	# Testing larger phi_max
 	phi_max = 5
 	k_min = 1
 	N_min = 1
