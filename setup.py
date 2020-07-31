@@ -21,7 +21,8 @@ setup(
 	install_requires=[
 		'numpy',
 		'matplotlib',
-		'tqdm'
+		'tqdm',
+		'tkinter'
 		],
 	test_suite='nose.collector',
 	tests_require=['nose']
