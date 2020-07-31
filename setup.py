@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
 	name = 'optimusbeez',
-	version = '0.0.9',
+	version = '1.0.0',
 	description = 'Simple Particle Swarm Optimization',
 	long_description = long_description,
 	long_description_content_type = 'text/markdown',
@@ -16,8 +16,7 @@ setup(
 	license='MIT',
 	packages=setuptools.find_packages(),
 	include_package_data=True,
-	package_data={'/optimusbeez': ['optimusbeez/optimal_constants.txt',
-	'optimusbeez/function_info.txt']},
+	package_data={'': ['*.txt'],},
 	classifiers=['Programming Language :: Python :: 3'],
 	install_requires=[
 		'numpy',

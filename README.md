@@ -1,29 +1,49 @@
 # Optimus-Beez
 
-This is a Particle Swarm Optimization (PSO) package. The PSO used is the simplest version presented by Maurice Clarc in "Particle Swarm Optimization".
+This is a Particle Swarm Optimization (PSO) package. The PSO used is the simplest version presented by Maurice Clarc in "Particle Swarm Optimization" with some minor modifications.
 
 # Installation
 
 Run the following command:
-pip install optimusbeez
+>>>pip install optimusbeez
+Make sure you have installed the latest version. Old versions may be faulty.
 
 # How to use Optimus-Beez
 
 ## Choosing the function to evaluate
 
-The default function to evaluate is Rosenbrock. To change this, first check out evaluate.py. This file contains evaluate() that evaluates points for different functions. If the function you wish to use is not defined, then go ahead and add it to evaluate(). Then go to function_info.txt and change
-- fn_name to the name of one of the functions in evaluate()
-- true_position to the x,y-coordinates of the global minimum of your function
+The default function to evaluate is Rosenbrock. To change this, first check out evaluate.py. This file contains predefined functions including Rosenbrock, Alpine, Griewank, and a flat surface. If the function you wish to use is not defined, then go ahead and add it to evaluate.py. Then go to function_info.txt and
+- change fn_name to the name of your function
+- set the search space with xmin and xmax
+Note that fn_info and constants are both dictionaries. To get information about the other keys in the fn_info dictionary, use help() on the Experiment object of optimusbeez.
+If you define your own function, you must also import it in PSO.py.
 
-## Optimizing the parameters of the PSO
+## Creating an Experiment
 
-The optimization algorithm itself contains 5 parameters that need to be set by the user. These are set in the file optimal_constants.txt. In the code, these parameters are referred to as 'constants' so as not to confuse them with the x,y-coordinates.
-It is a good idea to optimize these constants using optimize_constants.py. Run optimize_constants.py on your command line. This is just good old random search optimization. You will be prompted several times for input. Use a value of 'time steps' similar to what you want to use with PSO.
-When the random search is completed, you will be asked if you want to overwrite the file optimal_constants.txt. Do this if you would like to use these constants in PSO.py.
+Optimusbeez has an Experiment class. The first steps to using the optimusbeez package are
+>>>import optimusbeez as ob
+>>>experiment = ob.Experiment()
+If no arguments are passed to the Experiment object, then it is created with default parameters (hereafter referred to as constants) from the file 'optimal_constants.txt' and function info from 'fn_info.txt'. You can easily change these after creating the experiment object. For example,
+>>>experiment.N = 20
+changes the number of particles in the swarm to 20. You can also change the evaluation function.
+>>>experiment.fn_name = 'Alpine'
+To see the current configuration of constants and function info, you can use
+>>>experiment.constants()
+>>>experiment.fn_info()
 
-## Using PSO
+## Running the Experiment
 
-The main script is PSO.py. Run this in the command line. You will be asked if you want to change the number of evaluations. If the value you wish to set is much larger or smaller than the default value, it is advised you run optimize_constants.py again. Set the value, or use the default value and wait for the PSO to finish. You will see an animation of your swarm at the end.
+To evolve the swarm through time, you must run the experiment.
+>>>experiment.run(1000)
+The argument passed to the run function is the number of evaluations. The experiment will run and show a progress bar. If show_animation is set to True in fn_info, then an animation of the swarm will be shown at the end of the run. Results will be printed on the screen as well as returned in the format (best found position, value at that position, difference from optimal_f). optimal_f is the expected minimum value of the function, usually 0. It is defined in the fn_info dictionary.
+
+## Running the Experiment several times
+
+The function evaluate_experiment() is very useful to gauge the constants configuration and how the optimization algorithm fares in general. This function takes 3 arguments - an experiment object, the number of evaluations, and the number of times the experiment should be run. The function returns the average best value and its standard deviation. It also plots a histogram of the results from 0 to 10.
+
+## Optimizing the Experiment constants
+
+The PSO algorithm itself has 5 parameters: phi, N, k, time steps, and repetitions. These can be changed manually but Optimusbeez can also optimize itself with the function optimize_constants(). This function takes 4 arguments - allowed evaluations, allowed deviation from the number of evaluations, optimization time steps, and optimization repetitions. This function creates a swarm of particles with a 5D array of positions corresponding to the 5 constants. It runs an experiment with these constants and moves the swarm towards the best constants configuration. Usually it does a pretty good job, but it is better to test the constants configuration afterwards and adjust the constants manually.
 
 ## Testing
 
