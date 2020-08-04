@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
 	name = 'optimusbeez',
-	version = '1.0.1',
+	version = '1.0.0',
 	description = 'Simple Particle Swarm Optimization',
 	long_description = long_description,
 	long_description_content_type = 'text/markdown',
@@ -22,7 +22,6 @@ setup(
 		'numpy',
 		'matplotlib',
 		'tqdm',
-		'tkinter'
 		],
 	test_suite='nose.collector',
 	tests_require=['nose']
