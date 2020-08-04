@@ -24,8 +24,8 @@ If you define your own function, you must also import it in PSO.py.
 
 Optimusbeez has an Experiment class. The first steps to using the optimusbeez package are
 
-<code>import optimusbeez as ob
-experiment = ob.Experiment()</code>
+<code>import optimusbeez as ob</code><br>
+<code>experiment = ob.Experiment()</code>
 
 If no arguments are passed to the Experiment object, then it is created with default parameters (hereafter referred to as constants) from the file 'optimal_constants.txt' and function info from 'fn_info.txt'. You can easily change these after creating the experiment object. For example,
 
