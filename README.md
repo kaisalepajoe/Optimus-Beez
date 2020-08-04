@@ -5,7 +5,9 @@ This is a Particle Swarm Optimization (PSO) package. The PSO used is the simples
 # Installation
 
 Run the following command:
+
 <code>pip install optimusbeez</code>
+
 Make sure you have installed the latest version. Old versions may be faulty.
 
 # How to use Optimus-Beez
@@ -21,20 +23,29 @@ If you define your own function, you must also import it in PSO.py.
 ## Creating an Experiment
 
 Optimusbeez has an Experiment class. The first steps to using the optimusbeez package are
+
 <code>import optimusbeez as ob
 experiment = ob.Experiment()</code>
+
 If no arguments are passed to the Experiment object, then it is created with default parameters (hereafter referred to as constants) from the file 'optimal_constants.txt' and function info from 'fn_info.txt'. You can easily change these after creating the experiment object. For example,
+
 <code>experiment.N = 20</code>
+
 changes the number of particles in the swarm to 20. You can also change the evaluation function.
+
 <code>experiment.fn_name = 'Alpine'</code>
+
 To see the current configuration of constants and function info, you can use
+
 <code>experiment.constants()
 experiment.fn_info()</code>
 
 ## Running the Experiment
 
 To evolve the swarm through time, you must run the experiment.
+
 <code>experiment.run(1000)</code>
+
 The argument passed to the run function is the number of evaluations. The experiment will run and show a progress bar. If show_animation is set to True in fn_info, then an animation of the swarm will be shown at the end of the run. Results will be printed on the screen as well as returned in the format (best found position, value at that position, difference from optimal_f). optimal_f is the expected minimum value of the function, usually 0. It is defined in the fn_info dictionary.
 
 ## Running the Experiment several times
