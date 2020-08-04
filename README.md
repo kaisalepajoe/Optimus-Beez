@@ -37,8 +37,8 @@ changes the number of particles in the swarm to 20. You can also change the eval
 
 To see the current configuration of constants and function info, you can use
 
-<code>experiment.constants()
-experiment.fn_info()</code>
+<code>experiment.constants()</code><br>
+<code>experiment.fn_info()</code>
 
 ## Running the Experiment
 
